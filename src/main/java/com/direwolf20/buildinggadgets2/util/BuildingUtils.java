@@ -31,14 +31,16 @@ import net.minecraft.world.level.material.FluidState;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.BlockSnapshot;
-import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import java.util.*;
 
@@ -54,124 +56,110 @@ public class BuildingUtils {
             return server.getLevel(globalPos.dimension());
     }
 
-    public static IItemHandler getHandlerFromBound(Player player, GlobalPos boundInventory, Direction direction) {
+    public static ResourceHandler<ItemResource> getHandlerFromBound(Player player, GlobalPos boundInventory, Direction direction) {
         Level level = getLevel(player.level().getServer(), boundInventory);
         if (level == null) return null;
 
         BlockEntity blockEntity = level.getBlockEntity(boundInventory.pos());
         if (blockEntity == null) return null;
 
-        return level.getCapability(Capabilities.ItemHandler.BLOCK, boundInventory.pos(), direction);
+        return level.getCapability(Capabilities.Item.BLOCK, boundInventory.pos(), direction);
     }
 
-    public static ItemStack checkFluidHandlerForFluids(IFluidHandlerItem handler, FluidStack fluidStack, boolean simulate) {
-        FluidStack drainedStack = handler.drain(fluidStack, IFluidHandler.FluidAction.SIMULATE);
-        if (drainedStack.getAmount() == fluidStack.getAmount()) {
-            if (!simulate)
-                handler.drain(fluidStack, IFluidHandler.FluidAction.EXECUTE);
-            fluidStack.shrink(drainedStack.getAmount());
-            return handler.getContainer();
+    /**
+     * Drain {@code fluidStack.getAmount()} units of {@code fluidStack}'s fluid from the given handler, if the full amount is available.
+     * Shrinks {@code fluidStack} in-place on success. Returns whether the drain happened (or would happen, when simulating).
+     */
+    public static boolean drainFluidFromHandler(ResourceHandler<FluidResource> handler, FluidStack fluidStack, boolean simulate) {
+        if (fluidStack.isEmpty()) return false;
+        FluidResource resource = FluidResource.of(fluidStack);
+        int needed = fluidStack.getAmount();
+        try (Transaction tx = Transaction.openRoot()) {
+            int extracted = handler.extract(resource, needed, tx);
+            if (extracted == needed) {
+                if (!simulate) tx.commit();
+                fluidStack.shrink(extracted);
+                return true;
+            }
         }
-        return ItemStack.EMPTY;
+        return false;
     }
 
-    public static ItemStack insertFluidIntoHandler(IFluidHandlerItem handler, FluidStack fluidStack, boolean simulate) {
-        int filled = handler.fill(fluidStack, IFluidHandler.FluidAction.SIMULATE);
-        if (filled == fluidStack.getAmount()) {
-            if (!simulate)
-                handler.fill(fluidStack, IFluidHandler.FluidAction.EXECUTE);
-            fluidStack.shrink(filled);
-            return handler.getContainer();
+    /**
+     * Insert {@code fluidStack.getAmount()} units of {@code fluidStack}'s fluid into the given handler, if the full amount fits.
+     * Shrinks {@code fluidStack} in-place on success. Returns whether the insert happened (or would happen, when simulating).
+     */
+    public static boolean insertFluidIntoHandler(ResourceHandler<FluidResource> handler, FluidStack fluidStack, boolean simulate) {
+        if (fluidStack.isEmpty()) return false;
+        FluidResource resource = FluidResource.of(fluidStack);
+        int amount = fluidStack.getAmount();
+        try (Transaction tx = Transaction.openRoot()) {
+            int inserted = ResourceHandlerUtil.insertStacking(handler, resource, amount, tx);
+            if (inserted == amount) {
+                if (!simulate) tx.commit();
+                fluidStack.shrink(inserted);
+                return true;
+            }
         }
-        return ItemStack.EMPTY;
+        return false;
     }
 
     // TODO: Dire learn about avoiding the non-DRY hell. (Dry = Don't Repeat Yourself)
-    public static ItemStack checkItemForFluids(ItemStack itemStack, FluidStack fluidStack, boolean simulate) {
-        var itemStackCapability = itemStack.getCapability(Capabilities.ItemHandler.ITEM, null);
-        if (itemStackCapability != null) {
-            checkItemHandlerForFluids(itemStackCapability, fluidStack, simulate);
-            if (fluidStack.isEmpty())
-                return ItemStack.EMPTY; //The Item Handler removed this for us, so no need to remove it again!
+    public static void checkItemForFluids(ItemAccess itemAccess, FluidStack fluidStack, boolean simulate) {
+        if (fluidStack.isEmpty()) return;
+        ResourceHandler<ItemResource> itemHandlerCap = itemAccess.getCapability(Capabilities.Item.ITEM);
+        if (itemHandlerCap != null) {
+            checkItemHandlerForFluids(itemHandlerCap, fluidStack, simulate);
+            if (fluidStack.isEmpty()) return; // bag-in-item handled it
         }
 
-        var fluidStackCapability = itemStack.getCapability(Capabilities.FluidHandler.ITEM, null);
-        if (fluidStackCapability != null) {
-            ItemStack returnedStack = checkFluidHandlerForFluids(fluidStackCapability, fluidStack, simulate);
-            if (fluidStack.isEmpty())
-                return returnedStack;
+        ResourceHandler<FluidResource> fluidHandlerCap = itemAccess.getCapability(Capabilities.Fluid.ITEM);
+        if (fluidHandlerCap != null) {
+            drainFluidFromHandler(fluidHandlerCap, fluidStack, simulate);
         }
-
-        return ItemStack.EMPTY;
     }
 
-    public static ItemStack insertFluidIntoItem(ItemStack itemStack, FluidStack fluidStack, boolean simulate) {
-        var itemStackCapability = itemStack.getCapability(Capabilities.ItemHandler.ITEM, null);
-        if (itemStackCapability != null) {
-            insertFluidIntoItemHandler(itemStackCapability, fluidStack, simulate);
-            if (fluidStack.isEmpty())
-                return ItemStack.EMPTY; //The Item Handler removed this for us, so no need to remove it again!
+    public static void insertFluidIntoItem(ItemAccess itemAccess, FluidStack fluidStack, boolean simulate) {
+        if (fluidStack.isEmpty()) return;
+        ResourceHandler<ItemResource> itemHandlerCap = itemAccess.getCapability(Capabilities.Item.ITEM);
+        if (itemHandlerCap != null) {
+            insertFluidIntoItemHandler(itemHandlerCap, fluidStack, simulate);
+            if (fluidStack.isEmpty()) return; // bag-in-item handled it
         }
 
-        var fluidStackCapability = itemStack.getCapability(Capabilities.FluidHandler.ITEM, null);
-        if (fluidStackCapability != null) {
-            ItemStack returnedStack = insertFluidIntoHandler(fluidStackCapability, fluidStack, simulate);
-            if (fluidStack.isEmpty())
-                return returnedStack;
+        ResourceHandler<FluidResource> fluidHandlerCap = itemAccess.getCapability(Capabilities.Fluid.ITEM);
+        if (fluidHandlerCap != null) {
+            insertFluidIntoHandler(fluidHandlerCap, fluidStack, simulate);
         }
-        return ItemStack.EMPTY;
     }
 
-    public static ItemStack checkItemHandlerForFluids(IItemHandler handler, FluidStack fluidStack, boolean simulate) {
-        for (int j = 0; j < handler.getSlots(); j++) {
-            ItemStack itemInSlot = handler.getStackInSlot(j);
-            ItemStack returnedStack = checkItemForFluids(itemInSlot.copy(), fluidStack, simulate);
-            if (fluidStack.isEmpty()) {
-                if (!simulate && !returnedStack.isEmpty()) {
-                    if (itemInSlot.getCount() == 1) {
-                        handler.extractItem(j, 1, false);
-                        handler.insertItem(j, returnedStack, false);
-                    } else {
-                        handler.extractItem(j, 1, false);
-                        ItemHandlerHelper.insertItemStacked(handler, returnedStack, false);
-                    }
-                }
-                return returnedStack;
-            }
+    public static void checkItemHandlerForFluids(ResourceHandler<ItemResource> handler, FluidStack fluidStack, boolean simulate) {
+        int size = handler.size();
+        for (int j = 0; j < size; j++) {
+            if (handler.getResource(j).isEmpty()) continue;
+            ItemAccess slotAccess = ItemAccess.forHandlerIndex(handler, j);
+            checkItemForFluids(slotAccess, fluidStack, simulate);
+            if (fluidStack.isEmpty()) return;
         }
-        return ItemStack.EMPTY;
     }
 
-    public static ItemStack insertFluidIntoItemHandler(IItemHandler handler, FluidStack fluidStack, boolean simulate) {
-        for (int j = 0; j < handler.getSlots(); j++) {
-            ItemStack itemInSlot = handler.getStackInSlot(j);
-            ItemStack returnedStack = insertFluidIntoItem(itemInSlot.copy().split(1), fluidStack, simulate);
-            if (fluidStack.isEmpty()) {
-                if (!simulate && !returnedStack.isEmpty()) {
-                    if (itemInSlot.getCount() == 1) {
-                        handler.extractItem(j, 1, false);
-                        handler.insertItem(j, returnedStack, false);
-                    } else {
-                        handler.extractItem(j, 1, false);
-                        ItemHandlerHelper.insertItemStacked(handler, returnedStack, false);
-                    }
-                }
-                return returnedStack;
-            }
+    public static void insertFluidIntoItemHandler(ResourceHandler<ItemResource> handler, FluidStack fluidStack, boolean simulate) {
+        int size = handler.size();
+        for (int j = 0; j < size; j++) {
+            if (handler.getResource(j).isEmpty()) continue;
+            ItemAccess slotAccess = ItemAccess.forHandlerIndex(handler, j);
+            insertFluidIntoItem(slotAccess, fluidStack, simulate);
+            if (fluidStack.isEmpty()) return;
         }
-        return ItemStack.EMPTY;
     }
 
-    public static void checkInventoryForFluids(Inventory inventory, FluidStack fluidStack, boolean simulate) {
+    public static void checkInventoryForFluids(Player player, Inventory inventory, FluidStack fluidStack, boolean simulate) {
         for (int j = 0; j < inventory.getContainerSize(); j++) {
             ItemStack itemInSlot = inventory.getItem(j);
-            ItemStack returnedStack = checkItemForFluids(itemInSlot, fluidStack, simulate);
-            if (fluidStack.isEmpty()) { //Got all the fluids we need
-                if (!simulate && !returnedStack.isEmpty()) {
-                    inventory.setItem(j, returnedStack);
-                }
-                break;
-            }
+            if (itemInSlot.isEmpty()) continue;
+            ItemAccess slotAccess = ItemAccess.forPlayerSlot(player, j);
+            checkItemForFluids(slotAccess, fluidStack, simulate);
+            if (fluidStack.isEmpty()) return;
         }
     }
 
@@ -184,7 +172,7 @@ public class BuildingUtils {
             //     checkAE2ForFluids(boundInventory, player, fluidStack, simulate);
             //     if (fluidStack.isEmpty()) return true;
             // }
-            IItemHandler boundHandler = getHandlerFromBound(player, boundInventory, direction);
+            ResourceHandler<ItemResource> boundHandler = getHandlerFromBound(player, boundInventory, direction);
             if (boundHandler != null) {
                 checkItemHandlerForFluids(boundHandler, fluidStack, simulate);
             }
@@ -198,40 +186,50 @@ public class BuildingUtils {
         // }
         if (fluidStack.isEmpty()) return true;
 
-        Inventory playerInventory = player.getInventory();
-        checkInventoryForFluids(playerInventory, fluidStack, simulate);
-        if (fluidStack.isEmpty()) return true;
-        return false;
+        checkInventoryForFluids(player, player.getInventory(), fluidStack, simulate);
+        return fluidStack.isEmpty();
     }
 
     // TODO: Dire, DRY plz
-    public static void checkHandlerForItems(IItemHandler handler, List<ItemStack> testArray, boolean simulate) {
-        for (int j = 0; j < handler.getSlots(); j++) {
-            ItemStack itemInSlot = handler.getStackInSlot(j);
-            var itemStackCapability = itemInSlot.getCapability(Capabilities.ItemHandler.ITEM, null);
+    public static void checkHandlerForItems(ResourceHandler<ItemResource> handler, List<ItemStack> testArray, boolean simulate) {
+        int size = handler.size();
+        for (int j = 0; j < size; j++) {
+            ItemResource slotResource = handler.getResource(j);
+            if (slotResource.isEmpty()) continue;
+            ItemStack itemInSlot = slotResource.toStack(handler.getAmountAsInt(j));
 
-            if (itemStackCapability != null) {
-                checkHandlerForItems(itemStackCapability, testArray, simulate);
-                if (testArray.isEmpty()) break;
-            } else {
-                Optional<ItemStack> matchStack = testArray.stream().filter(e -> ItemStack.isSameItem(e, itemInSlot) && itemInSlot.getCount() >= e.getCount()).findFirst();
-                if (matchStack.isPresent()) { //Todo: Support multiple stacks of same item
-                    ItemStack matchingStack = matchStack.get();
-                    handler.extractItem(j, matchingStack.getCount(), simulate);
-                    testArray.remove(matchingStack);
+            // Check for a nested item handler first (bag-in-inventory)
+            ResourceHandler<ItemResource> nestedHandler = ItemAccess.forHandlerIndex(handler, j).getCapability(Capabilities.Item.ITEM);
+            if (nestedHandler != null && nestedHandler != handler) {
+                checkHandlerForItems(nestedHandler, testArray, simulate);
+                if (testArray.isEmpty()) return;
+                continue;
+            }
+
+            Optional<ItemStack> matchStack = testArray.stream().filter(e -> ItemStack.isSameItem(e, itemInSlot) && itemInSlot.getCount() >= e.getCount()).findFirst();
+            if (matchStack.isPresent()) { //Todo: Support multiple stacks of same item
+                ItemStack matchingStack = matchStack.get();
+                try (Transaction tx = Transaction.openRoot()) {
+                    int extracted = handler.extract(j, slotResource, matchingStack.getCount(), tx);
+                    if (extracted == matchingStack.getCount()) {
+                        if (!simulate) tx.commit();
+                        testArray.remove(matchingStack);
+                    }
                 }
             }
-            if (testArray.isEmpty()) break;
+            if (testArray.isEmpty()) return;
         }
     }
 
-    public static void checkInventoryForItems(Inventory inventory, List<ItemStack> testArray, boolean simulate) {
+    public static void checkInventoryForItems(Player player, Inventory inventory, List<ItemStack> testArray, boolean simulate) {
         for (int j = 0; j < inventory.getContainerSize(); j++) {
             ItemStack itemInSlot = inventory.getItem(j);
-            var itemStackCapability = itemInSlot.getCapability(Capabilities.ItemHandler.ITEM, null);
-            if (itemStackCapability != null) {
-                checkHandlerForItems(itemStackCapability, testArray, simulate);
-                if (testArray.isEmpty()) break;
+            if (itemInSlot.isEmpty()) continue;
+            ItemAccess slotAccess = ItemAccess.forPlayerSlot(player, j);
+            ResourceHandler<ItemResource> nestedHandler = slotAccess.getCapability(Capabilities.Item.ITEM);
+            if (nestedHandler != null) {
+                checkHandlerForItems(nestedHandler, testArray, simulate);
+                if (testArray.isEmpty()) return;
             } else {
                 Optional<ItemStack> matchStack = testArray.stream().filter(e -> ItemStack.isSameItem(e, itemInSlot) && itemInSlot.getCount() >= e.getCount()).findFirst();
                 if (matchStack.isPresent()) { //Todo: Support multiple stacks of same item
@@ -241,7 +239,7 @@ public class BuildingUtils {
                     testArray.remove(matchingStack);
                 }
             }
-            if (testArray.isEmpty()) break;
+            if (testArray.isEmpty()) return;
         }
     }
 
@@ -255,7 +253,7 @@ public class BuildingUtils {
             //     checkAE2ForItems(boundInventory, player, testArray, simulate);
             //     if (testArray.isEmpty()) return true;
             // }
-            IItemHandler boundHandler = getHandlerFromBound(player, boundInventory, direction);
+            ResourceHandler<ItemResource> boundHandler = getHandlerFromBound(player, boundInventory, direction);
             if (boundHandler != null) {
                 checkHandlerForItems(boundHandler, testArray, simulate);
             }
@@ -270,16 +268,14 @@ public class BuildingUtils {
         // }
         if (testArray.isEmpty()) return true;
 
-        Inventory playerInventory = player.getInventory();
-        checkInventoryForItems(playerInventory, testArray, simulate);
-        if (testArray.isEmpty()) return true;
-        return false;
+        checkInventoryForItems(player, player.getInventory(), testArray, simulate);
+        return testArray.isEmpty();
     }
 
     public static int countItemStacks(Player player, ItemStack itemStack) {
         if (itemStack.isEmpty() || itemStack.is(Items.AIR)) return 0;
         Inventory playerInventory = player.getInventory();
-        final int[] counter = {0};
+        int counter = 0;
 
         //Check curious slots first:
         // TODO(port, caps-rework): load-bearing — Curios-slot item counting silently skipped
@@ -289,19 +285,23 @@ public class BuildingUtils {
 
         for (int i = 0; i < playerInventory.getContainerSize(); i++) {
             ItemStack slotStack = playerInventory.getItem(i);
-            var itemStackCapability = slotStack.getCapability(Capabilities.ItemHandler.ITEM, null);
-            if (itemStackCapability != null) {
-                for (int j = 0; j < itemStackCapability.getSlots(); j++) {
-                    ItemStack itemInSlot = itemStackCapability.getStackInSlot(j);
-                    if (ItemStack.isSameItem(itemInSlot, itemStack))
-                        counter[0] += itemInSlot.getCount();
+            if (slotStack.isEmpty()) continue;
+            ItemAccess slotAccess = ItemAccess.forPlayerSlot(player, i);
+            ResourceHandler<ItemResource> nestedHandler = slotAccess.getCapability(Capabilities.Item.ITEM);
+            if (nestedHandler != null) {
+                int size = nestedHandler.size();
+                for (int j = 0; j < size; j++) {
+                    ItemResource nestedResource = nestedHandler.getResource(j);
+                    if (nestedResource.isEmpty()) continue;
+                    if (ItemStack.isSameItem(nestedResource.toStack(), itemStack))
+                        counter += nestedHandler.getAmountAsInt(j);
                 }
             } else {
                 if (ItemStack.isSameItem(slotStack, itemStack))
-                    counter[0] += slotStack.getCount();
+                    counter += slotStack.getCount();
             }
         }
-        return counter[0];
+        return counter;
     }
 
     public static void giveFluidToPlayer(Player player, FluidStack returnedFluid, GlobalPos boundInventory, Direction direction) {
@@ -312,7 +312,7 @@ public class BuildingUtils {
             //     insertFluidIntoAE2(player, boundInventory, returnedFluid);
             //     if (returnedFluid.isEmpty()) return;
             // }
-            IItemHandler boundHandler = getHandlerFromBound(player, boundInventory, direction);
+            ResourceHandler<ItemResource> boundHandler = getHandlerFromBound(player, boundInventory, direction);
             if (boundHandler != null) {
                 insertFluidIntoItemHandler(boundHandler, returnedFluid, false);
             }
@@ -328,21 +328,10 @@ public class BuildingUtils {
         Inventory playerInventory = player.getInventory();
         for (int i = 0; i < playerInventory.getContainerSize(); i++) { //If this fails the fluid just gets voided!
             ItemStack slotStack = playerInventory.getItem(i);
-            ItemStack returnedStack = insertFluidIntoItem(slotStack.copy().split(1), returnedFluid, false);
-            if (!returnedStack.isEmpty()) {
-                if (slotStack.getCount() == 1) {
-                    playerInventory.setItem(i, returnedStack);
-                } else {
-                    slotStack.shrink(1);
-                    if (!player.addItem(returnedStack)) {
-                        BlockPos dropPos = player.getOnPos();
-                        ItemEntity itementity = new ItemEntity(player.level(), dropPos.getX(), dropPos.getY(), dropPos.getZ(), returnedStack);
-                        itementity.setPickUpDelay(40);
-                        player.level().addFreshEntity(itementity);
-                    }
-                }
-                return;
-            }
+            if (slotStack.isEmpty()) continue;
+            ItemAccess slotAccess = ItemAccess.forPlayerSlot(player, i);
+            insertFluidIntoItem(slotAccess, returnedFluid, false);
+            if (returnedFluid.isEmpty()) return;
         }
     }
 
@@ -355,9 +344,10 @@ public class BuildingUtils {
             //     insertIntoAE2(player, boundInventory, tempReturnedItem);
             //     if (tempReturnedItem.isEmpty()) return;
             // }
-            IItemHandler boundHandler = getHandlerFromBound(player, boundInventory, direction);
+            ResourceHandler<ItemResource> boundHandler = getHandlerFromBound(player, boundInventory, direction);
             if (boundHandler != null) {
-                tempReturnedItem = ItemHandlerHelper.insertItemStacked(boundHandler, returnedItem, false);
+                int inserted = ResourceHandlerUtil.insertStacking(boundHandler, ItemResource.of(tempReturnedItem), tempReturnedItem.getCount(), null);
+                tempReturnedItem.shrink(inserted);
             }
         }
         if (tempReturnedItem.isEmpty()) return;
@@ -373,14 +363,13 @@ public class BuildingUtils {
         Inventory playerInventory = player.getInventory();
         for (int i = 0; i < playerInventory.getContainerSize(); i++) {
             ItemStack slotStack = playerInventory.getItem(i);
-            var itemStackCapability = slotStack.getCapability(Capabilities.ItemHandler.ITEM, null);
-            if (itemStackCapability != null) {
-                for (int j = 0; j < itemStackCapability.getSlots(); j++) {
-                    ItemStack itemInSlot = itemStackCapability.getStackInSlot(j);
-                    if (ItemStack.isSameItem(itemInSlot, realReturnedItem))
-                        itemStackCapability.insertItem(j, realReturnedItem.split(itemStackCapability.getSlotLimit(j) - itemInSlot.getCount()), false);
-                    if (realReturnedItem.isEmpty()) break;
-                }
+            if (slotStack.isEmpty()) continue;
+            ItemAccess slotAccess = ItemAccess.forPlayerSlot(player, i);
+            ResourceHandler<ItemResource> nestedHandler = slotAccess.getCapability(Capabilities.Item.ITEM);
+            if (nestedHandler != null) {
+                int inserted = ResourceHandlerUtil.insertStacking(nestedHandler, ItemResource.of(realReturnedItem), realReturnedItem.getCount(), null);
+                realReturnedItem.shrink(inserted);
+                if (realReturnedItem.isEmpty()) return;
             }
         }
         if (realReturnedItem.isEmpty()) return;
@@ -396,8 +385,8 @@ public class BuildingUtils {
 
     public static int getEnergyStored(ItemStack gadget) {
         if (gadget.getItem() instanceof BaseGadget baseGadget) {
-            IEnergyStorage energy = gadget.getCapability(Capabilities.EnergyStorage.ITEM);
-            return energy != null ? energy.getEnergyStored() : 0;
+            EnergyHandler energy = gadget.getCapability(Capabilities.Energy.ITEM, null);
+            return energy != null ? energy.getAmountAsInt() : 0;
         }
         return 0;
     }
@@ -422,10 +411,13 @@ public class BuildingUtils {
 
     public static void useEnergy(ItemStack gadget) {
         if (gadget.getItem() instanceof BaseGadget baseGadget) {
-            IEnergyStorage energy = gadget.getCapability(Capabilities.EnergyStorage.ITEM);
+            EnergyHandler energy = gadget.getCapability(Capabilities.Energy.ITEM, null);
             if (energy == null) return; //This should never happen, but just in case :
             int cost = baseGadget.getEnergyCost();
-            energy.extractEnergy(cost, false);
+            try (Transaction tx = Transaction.openRoot()) {
+                energy.extract(cost, tx);
+                tx.commit();
+            }
         }
     }
 

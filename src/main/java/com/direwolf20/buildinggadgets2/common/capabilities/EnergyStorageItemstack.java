@@ -1,81 +1,71 @@
 package com.direwolf20.buildinggadgets2.common.capabilities;
 
 import com.direwolf20.buildinggadgets2.setup.BG2DataComponents;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.IntTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.energy.EnergyStorage;
+import net.neoforged.neoforge.transfer.TransferPreconditions;
+import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
-public class EnergyStorageItemstack extends EnergyStorage {
+public class EnergyStorageItemstack implements EnergyHandler {
     protected final ItemStack itemStack;
+    protected final int capacity;
+    private final EnergyJournal journal = new EnergyJournal();
 
     public EnergyStorageItemstack(int capacity, ItemStack itemStack) {
-        super(capacity, capacity, capacity, 0);
+        this.capacity = capacity;
         this.itemStack = itemStack;
-        this.energy = itemStack.getOrDefault(BG2DataComponents.FORGE_ENERGY, 0);
     }
 
     public void setEnergy(int energy) {
-        this.energy = energy;
-        itemStack.set(BG2DataComponents.FORGE_ENERGY, energy);
+        itemStack.set(BG2DataComponents.FORGE_ENERGY, Math.max(0, Math.min(capacity, energy)));
     }
 
     @Override
-    public int receiveEnergy(int maxReceive, boolean simulate) {
-        if (!canReceive())
-            return 0;
-
-        int energyReceived = Math.min(capacity - energy, Math.min(this.maxReceive, maxReceive));
-        if (!simulate) {
-            energy += energyReceived;
-            itemStack.set(BG2DataComponents.FORGE_ENERGY, energy);
-        }
-        return energyReceived;
-    }
-
-    @Override
-    public int extractEnergy(int maxExtract, boolean simulate) {
-        if (!canExtract())
-            return 0;
-
-        int energyExtracted = Math.min(energy, Math.min(this.maxExtract, maxExtract));
-        if (!simulate) {
-            energy -= energyExtracted;
-            itemStack.set(BG2DataComponents.FORGE_ENERGY, energy);
-        }
-        return energyExtracted;
-    }
-
-    @Override
-    public int getEnergyStored() {
+    public long getAmountAsLong() {
         return itemStack.getOrDefault(BG2DataComponents.FORGE_ENERGY, 0);
     }
 
     @Override
-    public int getMaxEnergyStored() {
+    public long getCapacityAsLong() {
         return capacity;
     }
 
     @Override
-    public boolean canExtract() {
-        return this.maxExtract > 0;
+    public int insert(int amount, TransactionContext transaction) {
+        TransferPreconditions.checkNonNegative(amount);
+        int stored = itemStack.getOrDefault(BG2DataComponents.FORGE_ENERGY, 0);
+        int inserted = Math.min(capacity - stored, amount);
+        if (inserted > 0) {
+            journal.updateSnapshots(transaction);
+            itemStack.set(BG2DataComponents.FORGE_ENERGY, stored + inserted);
+            return inserted;
+        }
+        return 0;
     }
 
     @Override
-    public boolean canReceive() {
-        return this.maxReceive > 0;
+    public int extract(int amount, TransactionContext transaction) {
+        TransferPreconditions.checkNonNegative(amount);
+        int stored = itemStack.getOrDefault(BG2DataComponents.FORGE_ENERGY, 0);
+        int extracted = Math.min(stored, amount);
+        if (extracted > 0) {
+            journal.updateSnapshots(transaction);
+            itemStack.set(BG2DataComponents.FORGE_ENERGY, stored - extracted);
+            return extracted;
+        }
+        return 0;
     }
 
-    @Override
-    public Tag serializeNBT(HolderLookup.Provider provider) {
-        return IntTag.valueOf(this.getEnergyStored());
-    }
+    private class EnergyJournal extends SnapshotJournal<Integer> {
+        @Override
+        protected Integer createSnapshot() {
+            return itemStack.getOrDefault(BG2DataComponents.FORGE_ENERGY, 0);
+        }
 
-    @Override
-    public void deserializeNBT(HolderLookup.Provider provider, Tag nbt) {
-        if (!(nbt instanceof IntTag intNbt))
-            throw new IllegalArgumentException("Can not deserialize to an instance that isn't the default implementation");
-        this.energy = intNbt.getAsInt();
+        @Override
+        protected void revertToSnapshot(Integer snapshot) {
+            itemStack.set(BG2DataComponents.FORGE_ENERGY, snapshot);
+        }
     }
 }

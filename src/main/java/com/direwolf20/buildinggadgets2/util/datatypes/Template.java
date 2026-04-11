@@ -31,7 +31,7 @@ public class Template {
         this.name = name;
         this.statePosArrayList = BG2Data.statePosListToNBTMapArray(statePosArrayList).toString();
         Map<ItemStackKey, Integer> requiredItemsTemp = StatePos.getItemList(statePosArrayList);
-        HolderLookup.Provider registries = Minecraft.getInstance().level().registryAccess();
+        HolderLookup.Provider registries = Minecraft.getInstance().level.registryAccess();
         for (Map.Entry<ItemStackKey, Integer> entry : requiredItemsTemp.entrySet()) {
             if (entry.getKey().getStack().isEmpty()) continue;
             requiredItems.put(entry.getKey().item.value().getCreatorModId(registries, entry.getKey().getStack()) + ":" + entry.getKey().item.toString(), entry.getValue());
@@ -43,7 +43,7 @@ public class Template {
         ArrayList<StatePos> statePosList = new ArrayList<>();
 
         try {
-            CompoundTag deserializedNBT = TagParser.parseTag(this.statePosArrayList);
+            CompoundTag deserializedNBT = TagParser.parseCompoundFully(this.statePosArrayList);
             statePosList = BG2Data.statePosListFromNBTMapArray(deserializedNBT);
         } catch (Exception e) {
             return;

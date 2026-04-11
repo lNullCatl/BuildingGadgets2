@@ -41,7 +41,6 @@ public class BuildingGadgets2 {
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
-        // TODO(port, caps-rework): Capabilities.Energy.ITEM now returns EnergyHandler (not IEnergyStorage), and Capabilities.Item.BLOCK now returns ResourceHandler<ItemResource> (not IItemHandler). The lambdas below still return the old types — will fail at registration runtime. Proper fix is Priority 5 (rewrite EnergyStorageItemstack and TemplateManagerHandler against the new Transfer API, or add adapter classes). See PORTING_1.21.1_TO_26.1.md §3.15.
         event.registerItem(Capabilities.Energy.ITEM,
                 (itemStack, context) -> new EnergyStorageItemstack(((BaseGadget) itemStack.getItem()).getEnergyMax(), itemStack),
                 Registration.Building_Gadget.get(),
@@ -52,7 +51,6 @@ public class BuildingGadgets2 {
         );
         event.registerBlock(Capabilities.Item.BLOCK,
                 (level, pos, state, be, side) -> ((TemplateManagerBE) be).itemHandler,
-                // blocks to register for
                 Registration.TemplateManager.get());
     }
 }

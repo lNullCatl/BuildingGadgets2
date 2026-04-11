@@ -20,7 +20,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.capabilities.Capabilities;
 
 import javax.annotation.Nullable;
 
@@ -36,23 +35,6 @@ public class TemplateManager extends Block implements EntityBlock {
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         super.createBlockStateDefinition(builder);
         builder.add(FACING);
-    }
-
-    @Override
-    public void onRemove(BlockState state, Level worldIn, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (newState.getBlock() != this) {
-            BlockEntity blockEntity = worldIn.getBlockEntity(pos);
-            if (blockEntity != null && blockEntity instanceof TemplateManagerBE) {
-                var cap = worldIn.getCapability(Capabilities.ItemHandler.BLOCK, pos, state, blockEntity, null);
-                if (cap != null) {
-                    for (int i = 0; i < cap.getSlots(); ++i) {
-                        Containers.dropItemStack(worldIn, pos.getX(), pos.getY(), pos.getZ(), cap.getStackInSlot(i));
-                    }
-                }
-            }
-
-        }
-        super.onRemove(state, worldIn, pos, newState, isMoving);
     }
 
     @Nullable

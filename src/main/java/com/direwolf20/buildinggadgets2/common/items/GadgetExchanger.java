@@ -21,6 +21,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
@@ -29,13 +30,14 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 import static com.direwolf20.buildinggadgets2.util.BuildingUtils.hasEnoughEnergy;
 import static com.direwolf20.buildinggadgets2.util.BuildingUtils.useEnergy;
 
 public class GadgetExchanger extends BaseGadget {
     public GadgetExchanger() {
-        super();
+        super(new Properties().stacksTo(1).enchantable(3));
     }
 
     @Override
@@ -50,8 +52,8 @@ public class GadgetExchanger extends BaseGadget {
 
     @OnlyIn(Dist.CLIENT)
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flagIn) {
-        super.appendHoverText(stack, context, tooltip, flagIn);
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, display, tooltip, flagIn);
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) {
             return;
@@ -61,9 +63,9 @@ public class GadgetExchanger extends BaseGadget {
 
         if (sneakPressed) {
             BaseMode mode = GadgetNBT.getMode(stack);
-            tooltip.add(Component.translatable("buildinggadgets2.tooltips.mode", Component.translatable(mode.i18n())).setStyle(Styles.AQUA));
-            tooltip.add(Component.translatable("buildinggadgets2.tooltips.range", GadgetNBT.getToolRange(stack)).setStyle(Styles.LT_PURPLE));
-            tooltip.add(Component.translatable("buildinggadgets2.tooltips.blockstate", GadgetNBT.getGadgetBlockState(stack).getBlock().getName()).setStyle(Styles.DK_GREEN));
+            tooltip.accept(Component.translatable("buildinggadgets2.tooltips.mode", Component.translatable(mode.i18n())).setStyle(Styles.AQUA));
+            tooltip.accept(Component.translatable("buildinggadgets2.tooltips.range", GadgetNBT.getToolRange(stack)).setStyle(Styles.LT_PURPLE));
+            tooltip.accept(Component.translatable("buildinggadgets2.tooltips.blockstate", GadgetNBT.getGadgetBlockState(stack).getBlock().getName()).setStyle(Styles.DK_GREEN));
         }
     }
 
@@ -137,16 +139,6 @@ public class GadgetExchanger extends BaseGadget {
     /**
      * For Silk Touch - The tag that allows silk touch ALSO allows fortune, so I have to deny fortune after adding the tag....SUPER FUN!
      */
-    @Override
-    public boolean isEnchantable(ItemStack p_41456_) {
-        return true;
-    }
-
-    @Override
-    public int getEnchantmentValue() {
-        return 3;
-    }
-
     @Override
     public boolean isPrimaryItemFor(ItemStack stack, Holder<Enchantment> enchantment) {
         return super.isPrimaryItemFor(stack, enchantment) && canAcceptEnchantments(enchantment);

@@ -23,6 +23,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.BlockHitResult;
@@ -31,12 +32,16 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.capabilities.Capabilities;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public abstract class BaseGadget extends Item {
 
     public BaseGadget() {
-        super(new Properties()
-                .stacksTo(1));
+        this(new Properties().stacksTo(1));
+    }
+
+    protected BaseGadget(Properties properties) {
+        super(properties);
     }
 
     /**
@@ -54,38 +59,38 @@ public abstract class BaseGadget extends Item {
 
     @Override
     public boolean isBarVisible(ItemStack stack) {
-        var energy = stack.getCapability(Capabilities.EnergyStorage.ITEM);
+        var energy = stack.getCapability(Capabilities.Energy.ITEM, null);
         if (energy == null) {
             return false;
         }
 
-        return (energy.getEnergyStored() < energy.getMaxEnergyStored());
+        return (energy.getAmountAsInt() < energy.getCapacityAsInt());
     }
 
     @Override
     public int getBarWidth(ItemStack stack) {
-        var energy = stack.getCapability(Capabilities.EnergyStorage.ITEM);
+        var energy = stack.getCapability(Capabilities.Energy.ITEM, null);
         if (energy == null) {
             return 0;
         }
 
-        return Math.min(13 * energy.getEnergyStored() / energy.getMaxEnergyStored(), 13);
+        return Math.min(13 * energy.getAmountAsInt() / energy.getCapacityAsInt(), 13);
     }
 
     @Override
     public int getBarColor(ItemStack stack) {
-        var energy = stack.getCapability(Capabilities.EnergyStorage.ITEM);
+        var energy = stack.getCapability(Capabilities.Energy.ITEM, null);
         if (energy == null) {
             return super.getBarColor(stack);
         }
 
-        return Mth.hsvToRgb(Math.max(0.0F, (float) energy.getEnergyStored() / (float) energy.getMaxEnergyStored()) / 3.0F, 1.0F, 1.0F);
+        return Mth.hsvToRgb(Math.max(0.0F, (float) energy.getAmountAsInt() / (float) energy.getCapacityAsInt()) / 3.0F, 1.0F, 1.0F);
     }
 
     @OnlyIn(Dist.CLIENT)
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flagIn) {
-        super.appendHoverText(stack, context, tooltip, flagIn);
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flagIn) {
+        super.appendHoverText(stack, context, display, tooltip, flagIn);
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) {
             return;
@@ -94,23 +99,23 @@ public abstract class BaseGadget extends Item {
         boolean sneakPressed = Minecraft.getInstance().hasShiftDown();
 
         if (!sneakPressed) {
-            tooltip.add(Component.translatable("buildinggadgets2.tooltips.holdshift",
+            tooltip.accept(Component.translatable("buildinggadgets2.tooltips.holdshift",
                             "shift")
                     .withStyle(ChatFormatting.GRAY));
         } else {
             GlobalPos boundTo = GadgetNBT.getBoundPos(stack);
             if (boundTo != null) {
-                tooltip.add(Component.translatable("buildinggadgets2.tooltips.boundto", boundTo.dimension().identifier().getPath(), "[" + boundTo.pos().toShortString() + "]").setStyle(Styles.GOLD));
+                tooltip.accept(Component.translatable("buildinggadgets2.tooltips.boundto", boundTo.dimension().identifier().getPath(), "[" + boundTo.pos().toShortString() + "]").setStyle(Styles.GOLD));
             }
         }
 
-        var energy = stack.getCapability(Capabilities.EnergyStorage.ITEM);
+        var energy = stack.getCapability(Capabilities.Energy.ITEM, null);
         if (energy != null) {
             MutableComponent energyText = !sneakPressed
-                    ? Component.translatable("buildinggadgets2.tooltips.energy", MagicHelpers.tidyValue(energy.getEnergyStored()), MagicHelpers.tidyValue(energy.getMaxEnergyStored()))
-                    : Component.translatable("buildinggadgets2.tooltips.energy", String.format("%,d", energy.getEnergyStored()), String.format("%,d", energy.getMaxEnergyStored()));
+                    ? Component.translatable("buildinggadgets2.tooltips.energy", MagicHelpers.tidyValue(energy.getAmountAsInt()), MagicHelpers.tidyValue(energy.getCapacityAsInt()))
+                    : Component.translatable("buildinggadgets2.tooltips.energy", String.format("%,d", energy.getAmountAsInt()), String.format("%,d", energy.getCapacityAsInt()));
 
-            tooltip.add(energyText.withStyle(ChatFormatting.GREEN));
+            tooltip.accept(energyText.withStyle(ChatFormatting.GREEN));
         }
     }
 
@@ -155,7 +160,7 @@ public abstract class BaseGadget extends Item {
     public boolean bindToInventory(Level level, Player player, ItemStack gadget, BlockHitResult lookingAt) {
         BlockEntity blockEntity = level.getBlockEntity(lookingAt.getBlockPos());
         if (blockEntity != null) {
-            var itemHandler = level.getCapability(Capabilities.ItemHandler.BLOCK, lookingAt.getBlockPos(), lookingAt.getDirection());
+            var itemHandler = level.getCapability(Capabilities.Item.BLOCK, lookingAt.getBlockPos(), lookingAt.getDirection());
             if (itemHandler != null) {
                 GadgetNBT.setBoundPos(gadget, new GlobalPos(level.dimension(), lookingAt.getBlockPos()));
                 GadgetNBT.setToolValue(gadget, lookingAt.getDirection().ordinal(), GadgetNBT.IntSettings.BIND_DIRECTION.getName());

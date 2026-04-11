@@ -52,8 +52,8 @@ public class Registration {
     public static final DeferredHolder<Item, BlockItem> TemplateManager_ITEM = ITEMS.register("template_manager", () -> new BlockItem(TemplateManager.get(), new Item.Properties()));
 
     //BlockEntities (Not TileEntities - Honest)
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<RenderBlockBE>> RenderBlock_BE = BLOCK_ENTITIES.register("renderblock", () -> BlockEntityType.Builder.of(RenderBlockBE::new, RenderBlock.get()).build(null));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TemplateManagerBE>> TemplateManager_BE = BLOCK_ENTITIES.register("templatemanager", () -> BlockEntityType.Builder.of(TemplateManagerBE::new, TemplateManager.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<RenderBlockBE>> RenderBlock_BE = BLOCK_ENTITIES.register("renderblock", () -> new BlockEntityType<>(RenderBlockBE::new, RenderBlock.get()));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TemplateManagerBE>> TemplateManager_BE = BLOCK_ENTITIES.register("templatemanager", () -> new BlockEntityType<>(TemplateManagerBE::new, TemplateManager.get()));
     //public static final RegistryObject<BlockEntityType<LaserConnectorBE>> LaserConnector_BE = BLOCK_ENTITIES.register("laserconnector", () -> BlockEntityType.Builder.of(LaserConnectorBE::new, LaserConnector.get()).build(null));
 
     //Items
