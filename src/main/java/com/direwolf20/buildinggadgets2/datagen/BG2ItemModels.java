@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.datagen;
-
+/*
 import com.direwolf20.buildinggadgets2.BuildingGadgets2;
 import net.minecraft.data.PackOutput;
 import net.neoforged.neoforge.client.model.generators.ItemModelProvider;
@@ -20,3 +20,4 @@ public class BG2ItemModels extends ItemModelProvider {
         //singleTexture(Registration.Building_Gadget.getId().getPath(), mcLoc("item/generated"), "layer0", modLoc("item/gadget_building"));
     }
 }
+*/

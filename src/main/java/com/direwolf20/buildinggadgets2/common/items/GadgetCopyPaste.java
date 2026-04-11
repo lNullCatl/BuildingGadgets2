@@ -14,7 +14,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -67,7 +67,7 @@ public class GadgetCopyPaste extends BaseGadget {
     }
 
     @Override
-    InteractionResultHolder<ItemStack> onAction(ItemActionContext context) {
+    InteractionResult onAction(ItemActionContext context) {
         var gadget = context.stack();
 
         var mode = GadgetNBT.getMode(gadget);
@@ -87,19 +87,19 @@ public class GadgetCopyPaste extends BaseGadget {
 
             GadgetUtils.addToUndoList(context.level(), gadget, new ArrayList<>(), buildUUID);
             //GadgetNBT.clearAnchorPos(gadget);
-            return InteractionResultHolder.success(gadget);
+            return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
         } else {
-            return InteractionResultHolder.pass(gadget);
+            return InteractionResult.PASS.heldItemTransformedTo(gadget);
         }
 
-        return InteractionResultHolder.success(gadget);
+        return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
     }
 
     /**
      * Selects the block assuming you're actually looking at one
      */
     @Override
-    InteractionResultHolder<ItemStack> onShiftAction(ItemActionContext context) {
+    InteractionResult onShiftAction(ItemActionContext context) {
         var gadget = context.stack();
 
         var mode = GadgetNBT.getMode(gadget);
@@ -109,10 +109,10 @@ public class GadgetCopyPaste extends BaseGadget {
         } else if (mode.equals(new Paste())) {
             //Paste
         } else {
-            return InteractionResultHolder.pass(gadget);
+            return InteractionResult.PASS.heldItemTransformedTo(gadget);
         }
 
-        return InteractionResultHolder.success(gadget);
+        return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
     }
 
     public void buildAndStore(ItemActionContext context, ItemStack gadget) {

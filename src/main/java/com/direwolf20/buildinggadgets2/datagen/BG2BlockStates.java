@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.datagen;
-
+/*
 import com.direwolf20.buildinggadgets2.BuildingGadgets2;
 import com.direwolf20.buildinggadgets2.setup.Registration;
 import net.minecraft.data.PackOutput;
@@ -19,3 +19,4 @@ public class BG2BlockStates extends BlockStateProvider {
         //simpleBlock(Registration.LaserNode.get(), models().getExistingFile(modLoc("block/laser_node")));
     }
 }
+*/

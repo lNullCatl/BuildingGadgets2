@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.datagen;
-
+/*
 import com.direwolf20.buildinggadgets2.setup.Registration;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.loot.packs.VanillaBlockLoot;
@@ -25,3 +25,4 @@ public class BG2LootTables extends VanillaBlockLoot {
         return Registration.BLOCKS.getEntries().stream().map(DeferredHolder::get).collect(Collectors.toList());
     }
 }
+*/

@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.datagen;
-
+/*
 import com.direwolf20.buildinggadgets2.BuildingGadgets2;
 import com.direwolf20.buildinggadgets2.setup.Registration;
 import net.minecraft.core.HolderLookup;
@@ -34,3 +34,4 @@ public class BG2ItemTags extends ItemTagsProvider {
         return "BuildingGadgets2 Item Tags";
     }
 }
+*/

@@ -19,7 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -67,7 +67,7 @@ public class GadgetDestruction extends BaseGadget {
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack gadget = player.getItemInHand(hand);
 
         BlockHitResult lookingAt = VectorHelper.getLookingAt(player, gadget);
@@ -78,20 +78,20 @@ public class GadgetDestruction extends BaseGadget {
         }
 
         if (level.isClientSide()) //No client
-            return InteractionResultHolder.success(gadget);
+            return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
 
         return this.onAction(context);
     }
 
     @Override
-    InteractionResultHolder<ItemStack> onAction(ItemActionContext context) {
+    InteractionResult onAction(ItemActionContext context) {
         var gadget = context.stack();
 
         BlockPos anchor = GadgetNBT.getAnchorPos(gadget);
         Direction anchorSide = GadgetNBT.getAnchorSide(gadget);
 
         if (context.level().getBlockState(VectorHelper.getLookingAt(context.player(), gadget).getBlockPos()) == Blocks.AIR.defaultBlockState() && anchor == null)
-            return InteractionResultHolder.pass(gadget);
+            return InteractionResult.PASS.heldItemTransformedTo(gadget);
 
         BlockPos startBlock = getHitPos(context);
         Direction facing = (anchorSide == null) ? context.hitResult().getDirection() : anchorSide;
@@ -104,11 +104,11 @@ public class GadgetDestruction extends BaseGadget {
         UUID buildUUID = BuildingUtils.removeTickHandler(context.level(), context.player(), destroyPosList, false, true, gadget);
         GadgetUtils.addToUndoList(context.level(), gadget, new ArrayList<>(), buildUUID); //If we placed anything at all, add to the undoList
         GadgetNBT.clearAnchorPos(gadget);
-        return InteractionResultHolder.success(gadget);
+        return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
     }
 
     @Override
-    InteractionResultHolder<ItemStack> onShiftAction(ItemActionContext context) {
+    InteractionResult onShiftAction(ItemActionContext context) {
         if (context.level().isClientSide)
             ScreenOpener.openDestructionScreen(context.stack());
 

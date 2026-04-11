@@ -34,7 +34,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -46,9 +46,9 @@ import java.util.List;
 import java.util.function.Predicate;
 
 public class ModeRadialMenu extends Screen {
-    private static final ImmutableList<ResourceLocation> signsCopyPaste = ImmutableList.of(
-            ResourceLocation.fromNamespaceAndPath(BuildingGadgets2.MODID, "textures/gui/mode/copy.png"),
-            ResourceLocation.fromNamespaceAndPath(BuildingGadgets2.MODID, "textures/gui/mode/paste.png")
+    private static final ImmutableList<Identifier> signsCopyPaste = ImmutableList.of(
+            Identifier.fromNamespaceAndPath(BuildingGadgets2.MODID, "textures/gui/mode/copy.png"),
+            Identifier.fromNamespaceAndPath(BuildingGadgets2.MODID, "textures/gui/mode/paste.png")
     );
     private final List<Button> conditionalButtons = new ArrayList<>();
     private int timeIn = 0;

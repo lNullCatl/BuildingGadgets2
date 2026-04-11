@@ -13,7 +13,7 @@ import com.direwolf20.buildinggadgets2.util.modes.BaseMode;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -60,11 +60,11 @@ public class GadgetBuilding extends BaseGadget {
     }
 
     @Override
-    InteractionResultHolder<ItemStack> onAction(ItemActionContext context) {
+    InteractionResult onAction(ItemActionContext context) {
         var gadget = context.stack();
 
         BlockState setState = GadgetNBT.getGadgetBlockState(gadget);
-        if (setState.isAir()) return InteractionResultHolder.pass(gadget);
+        if (setState.isAir()) return InteractionResult.PASS.heldItemTransformedTo(gadget);
 
         var mode = GadgetNBT.getMode(gadget);
         ArrayList<StatePos> buildList = mode.collect(context.hitResult().getDirection(), context.player(), getHitPos(context), setState);
@@ -72,21 +72,21 @@ public class GadgetBuilding extends BaseGadget {
         UUID buildUUID = BuildingUtils.build(context.level(), context.player(), buildList, getHitPos(context), gadget, true);
         GadgetUtils.addToUndoList(context.level(), gadget, new ArrayList<>(), buildUUID);
         GadgetNBT.clearAnchorPos(gadget);
-        return InteractionResultHolder.success(gadget);
+        return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
     }
 
     /**
      * Selects the block assuming you're actually looking at one
      */
     @Override
-    InteractionResultHolder<ItemStack> onShiftAction(ItemActionContext context) {
+    InteractionResult onShiftAction(ItemActionContext context) {
         BlockState blockState = context.level().getBlockState(context.pos());
         if (!GadgetUtils.isValidBlockState(blockState, context.level(), context.pos()) || blockState.getBlock() instanceof RenderBlock) {
             context.player().displayClientMessage(Component.translatable("buildinggadgets2.messages.invalidblock"), true);
             return super.onShiftAction(context);
         }
         if (GadgetUtils.setBlockState(context.stack(), blockState))
-            return InteractionResultHolder.success(context.stack());
+            return InteractionResult.SUCCESS.heldItemTransformedTo(context.stack());
 
         return super.onShiftAction(context);
     }

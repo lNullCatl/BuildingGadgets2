@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.datagen;
-
+/*
 import com.direwolf20.buildinggadgets2.setup.Registration;
 import net.minecraft.advancements.critereon.InventoryChangeTrigger;
 import net.minecraft.core.HolderLookup;
@@ -97,3 +97,4 @@ public class BG2Recipes extends RecipeProvider {
                 .save(consumer);
     }
 }
+*/

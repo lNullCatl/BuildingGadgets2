@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.datagen;
-
+/*
 import com.direwolf20.buildinggadgets2.BuildingGadgets2;
 import com.direwolf20.buildinggadgets2.setup.Registration;
 import net.minecraft.core.HolderLookup;
@@ -34,9 +34,9 @@ public class BG2BlockTags extends BlockTagsProvider {
                 .addTag(BlockTags.BEDS)
                 .addTag(BlockTags.PORTALS)
                 .addTag(BlockTags.DOORS);
-        /*tag(BlockTags.MINEABLE_WITH_PICKAXE)
-                .add(Registration.LaserNode.get())
-                .add(Registration.LaserConnector.get());*/
+        // tag(BlockTags.MINEABLE_WITH_PICKAXE)
+        //         .add(Registration.LaserNode.get())
+        //         .add(Registration.LaserConnector.get());
         tag(Tags.Blocks.RELOCATION_NOT_SUPPORTED)
                 .add(Registration.RenderBlock.get());
     }
@@ -46,3 +46,4 @@ public class BG2BlockTags extends BlockTagsProvider {
         return "BuildingGadgets2 Tags";
     }
 }
+*/

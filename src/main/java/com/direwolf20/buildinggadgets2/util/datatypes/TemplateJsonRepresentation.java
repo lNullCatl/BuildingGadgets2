@@ -1,6 +1,7 @@
 package com.direwolf20.buildinggadgets2.util.datatypes;
 
-import com.direwolf20.buildinggadgets2.datagen.BG2BlockTags;
+// TODO(datagen-port): re-import BG2BlockTags once datagen is rewritten for 26.1.
+//import com.direwolf20.buildinggadgets2.datagen.BG2BlockTags;
 import com.direwolf20.buildinggadgets2.util.VecHelpers;
 import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
@@ -51,10 +52,11 @@ public class TemplateJsonRepresentation {
                 return;
             }
 
-            if (blockState.is(BG2BlockTags.BG2DENY)) {
-                statePosList.add(new StatePos(Blocks.AIR.defaultBlockState(), pos));
-                return;
-            }
+            // TODO(datagen-port): re-enable BG2DENY tag check once datagen is rewritten for 26.1.
+            //if (blockState.is(BG2BlockTags.BG2DENY)) {
+            //    statePosList.add(new StatePos(Blocks.AIR.defaultBlockState(), pos));
+            //    return;
+            //}
             if (blockState.getBlock().defaultDestroyTime() < 0) {
                 statePosList.add(new StatePos(Blocks.AIR.defaultBlockState(), pos));
                 return;

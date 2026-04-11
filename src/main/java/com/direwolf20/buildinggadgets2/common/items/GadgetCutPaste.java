@@ -19,7 +19,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -72,7 +72,7 @@ public class GadgetCutPaste extends BaseGadget {
     }
 
     @Override
-    InteractionResultHolder<ItemStack> onAction(ItemActionContext context) {
+    InteractionResult onAction(ItemActionContext context) {
         var gadget = context.stack();
 
         var mode = GadgetNBT.getMode(gadget);
@@ -83,7 +83,7 @@ public class GadgetCutPaste extends BaseGadget {
             UUID uuid = GadgetNBT.getUUID(gadget);
             if (ServerTickHandler.gadgetWorking(GadgetNBT.getUUID(gadget))) {
                 context.player().displayClientMessage(Component.translatable("buildinggadgets2.messages.cutinprogress"), true);
-                return InteractionResultHolder.pass(gadget); // Do nothing if this gadget is already doing stuff!
+                return InteractionResult.PASS.heldItemTransformedTo(gadget); // Do nothing if this gadget is already doing stuff!
             }
             BG2Data bg2Data = BG2Data.get(Objects.requireNonNull(context.player().level().getServer()).overworld());
             ArrayList<StatePos> buildList = bg2Data.getCopyPasteList(uuid, false); //Don't remove the data just yet
@@ -95,19 +95,19 @@ public class GadgetCutPaste extends BaseGadget {
                 GadgetNBT.clearAnchorPos(gadget);
             GadgetNBT.clearCopyUUID(gadget); // Erase copy UUID so the user doesn't get the 'are you sure' prompt
             GadgetNBT.setMode(gadget, new Cut()); // Set it back to cut mode - no need to stay in paste since the paste is gone :)
-            return InteractionResultHolder.success(gadget);
+            return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
         } else {
-            return InteractionResultHolder.pass(gadget);
+            return InteractionResult.PASS.heldItemTransformedTo(gadget);
         }
 
-        return InteractionResultHolder.success(gadget);
+        return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
     }
 
     /**
      * Selects the block assuming you're actually looking at one
      */
     @Override
-    InteractionResultHolder<ItemStack> onShiftAction(ItemActionContext context) {
+    InteractionResult onShiftAction(ItemActionContext context) {
         var gadget = context.stack();
 
         var mode = GadgetNBT.getMode(gadget);
@@ -116,10 +116,10 @@ public class GadgetCutPaste extends BaseGadget {
         } else if (mode.equals(new Paste())) {
             //Paste
         } else {
-            return InteractionResultHolder.pass(gadget);
+            return InteractionResult.PASS.heldItemTransformedTo(gadget);
         }
 
-        return InteractionResultHolder.success(gadget);
+        return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
     }
 
     public void cutAndStore(Player player, ItemStack gadget) {

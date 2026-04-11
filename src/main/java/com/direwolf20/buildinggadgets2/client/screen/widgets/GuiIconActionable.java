@@ -10,7 +10,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.awt.*;
 import java.util.function.Predicate;
@@ -29,8 +29,8 @@ public class GuiIconActionable extends Button {
     private final Color deselectedColor = new Color(255, 255, 255, 50);
     private Color activeColor;
 
-    private final ResourceLocation selectedTexture;
-    private final ResourceLocation deselectedTexture;
+    private final Identifier selectedTexture;
+    private final Identifier deselectedTexture;
 
     public GuiIconActionable(int x, int y, String texture, Component message, boolean isSelectable, Predicate<Boolean> action) {
         //super(builder(message, (button) -> {}).pos(x, y).size(25, 25));
@@ -45,8 +45,8 @@ public class GuiIconActionable extends Button {
         // Set the selected and deselected textures.
         String assetLocation = "textures/gui/setting/%s.png";
 
-        this.deselectedTexture = ResourceLocation.fromNamespaceAndPath(BuildingGadgets2.MODID, String.format(assetLocation, texture));
-        this.selectedTexture = !isSelectable ? this.deselectedTexture : ResourceLocation.fromNamespaceAndPath(BuildingGadgets2.MODID, String.format(assetLocation, texture + "_selected"));
+        this.deselectedTexture = Identifier.fromNamespaceAndPath(BuildingGadgets2.MODID, String.format(assetLocation, texture));
+        this.selectedTexture = !isSelectable ? this.deselectedTexture : Identifier.fromNamespaceAndPath(BuildingGadgets2.MODID, String.format(assetLocation, texture + "_selected"));
     }
 
     /**
@@ -102,7 +102,7 @@ public class GuiIconActionable extends Button {
         RenderSystem.setShaderTexture(0, selected ? selectedTexture : deselectedTexture);
         RenderSystem.setShaderColor(activeColor.getRed() / 255f, activeColor.getGreen() / 255f, activeColor.getBlue() / 255f, alpha);
 
-        ResourceLocation texture = selected ? selectedTexture : deselectedTexture;
+        Identifier texture = selected ? selectedTexture : deselectedTexture;
         guiGraphics.blit(texture, this.getX(), this.getY(), 0, 0, this.width, this.height, this.width, this.height);
         RenderSystem.setShaderColor(1, 1, 1, 1);
         RenderSystem.disableBlend();

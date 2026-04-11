@@ -19,7 +19,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -119,24 +119,24 @@ public abstract class BaseGadget extends Item {
      * Implementation level of for the onAction & onShiftAction methods below.
      */
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack gadget = player.getItemInHand(hand);
 
         if (level.isClientSide()) //No client
-            return InteractionResultHolder.success(gadget);
+            return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
 
         BlockHitResult lookingAt = VectorHelper.getLookingAt(player, gadget);
         if (level.getBlockState(lookingAt.getBlockPos()).isAir() && GadgetNBT.getAnchorPos(gadget).equals(GadgetNBT.nullPos))
-            return InteractionResultHolder.success(gadget);
+            return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
         ItemActionContext context = new ItemActionContext(lookingAt.getBlockPos(), lookingAt, player, level, hand, gadget);
 
         if (player.isShiftKeyDown()) {
             if (GadgetNBT.getSetting(gadget, GadgetNBT.ToggleableSettings.BIND.getName())) {
                 if (bindToInventory(level, player, gadget, lookingAt)) {
                     GadgetNBT.toggleSetting(gadget, GadgetNBT.ToggleableSettings.BIND.getName()); //Turn off bind
-                    return InteractionResultHolder.success(gadget);
+                    return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
                 } else {
-                    return InteractionResultHolder.fail(gadget);
+                    return InteractionResult.FAIL.heldItemTransformedTo(gadget);
                 }
             }
             return this.onShiftAction(context);
@@ -145,12 +145,12 @@ public abstract class BaseGadget extends Item {
         return this.onAction(context);
     }
 
-    InteractionResultHolder<ItemStack> onAction(ItemActionContext context) {
-        return InteractionResultHolder.pass(context.stack());
+    InteractionResult onAction(ItemActionContext context) {
+        return InteractionResult.PASS.heldItemTransformedTo(context.stack());
     }
 
-    InteractionResultHolder<ItemStack> onShiftAction(ItemActionContext context) {
-        return InteractionResultHolder.pass(context.stack());
+    InteractionResult onShiftAction(ItemActionContext context) {
+        return InteractionResult.PASS.heldItemTransformedTo(context.stack());
     }
 
     public boolean bindToInventory(Level level, Player player, ItemStack gadget, BlockHitResult lookingAt) {
