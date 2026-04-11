@@ -1,101 +1,23 @@
 package com.direwolf20.buildinggadgets2.client.renderer;
 
 import com.direwolf20.buildinggadgets2.util.GadgetNBT;
-import com.google.common.collect.ImmutableMap;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.*;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.inventory.InventoryMenu;
-import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import org.joml.Matrix4f;
 
 import java.awt.*;
-import java.util.Map;
-
-import static net.minecraft.client.renderer.RenderType.entityTranslucentCull;
 
 public class MyRenderMethods {
     private static float dummyU0 = 0F;
     private static float dummyU1 = 1F;
     private static float dummyV0 = 0F;
     private static float dummyV1 = 1F;
-    private static Map<BlockEntityType<?>, BlockEntityRenderer<?>> renderers = ImmutableMap.of();
-
-    public static void renderBETransparent(BlockState pState, PoseStack pPoseStack, MultiBufferSource pBufferSource, int pPackedLight, int pPackedOverlay, float alpha) {
-        MultiplyAlphaRenderTypeBuffer multiplyAlphaRenderTypeBuffer = new MultiplyAlphaRenderTypeBuffer(pBufferSource, alpha);
-        ItemStack stack = new ItemStack(pState.getBlock());
-        IClientItemExtensions.of(stack).getCustomRenderer().renderByItem(stack, ItemDisplayContext.NONE, pPoseStack, multiplyAlphaRenderTypeBuffer, pPackedLight, pPackedOverlay);
-    }
-
-    public static class MultiplyAlphaRenderTypeBuffer implements MultiBufferSource {
-        private final MultiBufferSource inner;
-        private final float constantAlpha;
-
-        public MultiplyAlphaRenderTypeBuffer(MultiBufferSource inner, float constantAlpha) {
-            this.inner = inner;
-            this.constantAlpha = constantAlpha;
-        }
-
-        @Override
-        public VertexConsumer getBuffer(RenderType type) {
-            RenderType localType = type;
-            if (localType instanceof RenderType.CompositeRenderType) {
-                // all of this requires a lot of AT's so be aware of that on ports
-                Identifier texture = ((RenderStateShard.TextureStateShard) ((RenderType.CompositeRenderType) localType).state.textureState).texture
-                        .orElse(InventoryMenu.BLOCK_ATLAS);
-
-                localType = entityTranslucentCull(texture);
-            } else if (localType.toString().equals(Sheets.translucentCullBlockSheet().toString())) {
-                localType = Sheets.translucentCullBlockSheet();
-            }
-
-            return new DireVertexConsumer(this.inner.getBuffer(localType), constantAlpha);
-        }
-    }
-
-    public static void renderBESquished(BlockState pState, PoseStack pPoseStack, MultiBufferSource pBufferSource, int pPackedLight, int pPackedOverlay, float alpha) {
-        SquishedRenderTypeBuffer multiplyAlphaRenderTypeBuffer = new SquishedRenderTypeBuffer(pBufferSource, alpha, pPoseStack.last().pose());
-        ItemStack stack = new ItemStack(pState.getBlock());
-        net.neoforged.neoforge.client.extensions.common.IClientItemExtensions.of(stack).getCustomRenderer().renderByItem(stack, ItemDisplayContext.NONE, pPoseStack, multiplyAlphaRenderTypeBuffer, pPackedLight, pPackedOverlay);
-    }
-
-    public static class SquishedRenderTypeBuffer implements MultiBufferSource {
-        private final MultiBufferSource inner;
-        private final float squishAmt;
-        private final Matrix4f matrix4f;
-
-        public SquishedRenderTypeBuffer(MultiBufferSource inner, float squishAmt, Matrix4f matrix4f) {
-            this.inner = inner;
-            this.squishAmt = squishAmt;
-            this.matrix4f = matrix4f;
-        }
-
-        @Override
-        public VertexConsumer getBuffer(RenderType type) {
-            RenderType localType = type;
-            if (localType instanceof RenderType.CompositeRenderType) {
-                // all of this requires a lot of AT's so be aware of that on ports
-                Identifier texture = ((RenderStateShard.TextureStateShard) ((RenderType.CompositeRenderType) localType).state.textureState).texture
-                        .orElse(InventoryMenu.BLOCK_ATLAS);
-
-                localType = entityTranslucentCull(texture);
-            } else if (localType.toString().equals(Sheets.translucentCullBlockSheet().toString())) {
-                localType = Sheets.translucentCullBlockSheet();
-            }
-
-            return new DireVertexConsumerSquished(this.inner.getBuffer(localType), 0, 0, 0, 1, squishAmt, 1, matrix4f);
-        }
-    }
 
     public static void renderCopy(PoseStack matrix, BlockPos startPos, BlockPos endPos, Color color) {
         if (startPos.equals(GadgetNBT.nullPos) || endPos.equals(GadgetNBT.nullPos))
@@ -109,7 +31,7 @@ public class MyRenderMethods {
         int dz = (startPos.getZ() > endPos.getZ()) ? startPos.getZ() + 1 : endPos.getZ() + 1;
 
         MultiBufferSource.BufferSource buffer = Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer builder = buffer.getBuffer(OurRenderTypes.lines());
+        VertexConsumer builder = buffer.getBuffer(RenderTypes.lines());
 
         matrix.pushPose();
         Matrix4f matrix4f = matrix.last().pose();
@@ -141,7 +63,7 @@ public class MyRenderMethods {
         builder.addVertex(matrix4f, dx, dy, z).setColor(colorRGB).setNormal(matrix3f, 0.0F, 0.0F, 1.0F);
         builder.addVertex(matrix4f, dx, dy, dz).setColor(colorRGB).setNormal(matrix3f, 0.0F, 0.0F, 1.0F);
 
-        buffer.endBatch(OurRenderTypes.lines()); // @mcp: draw = finish
+        buffer.endBatch(RenderTypes.lines());
         matrix.popPose();
     }
 
@@ -211,7 +133,7 @@ public class MyRenderMethods {
         int dy = (startPos.getY() > endPos.getY()) ? startPos.getY() + 1 : endPos.getY() + 1;
         int dz = (startPos.getZ() > endPos.getZ()) ? startPos.getZ() + 1 : endPos.getZ() + 1;
 
-        VertexConsumer builder = buffer.getBuffer(OurRenderTypes.lines());
+        VertexConsumer builder = buffer.getBuffer(RenderTypes.lines());
 
         matrix.pushPose();
         Matrix4f matrix4f = matrix.last().pose();
