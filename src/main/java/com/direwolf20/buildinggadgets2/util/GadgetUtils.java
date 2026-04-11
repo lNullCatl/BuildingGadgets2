@@ -2,8 +2,6 @@ package com.direwolf20.buildinggadgets2.util;
 
 import com.direwolf20.buildinggadgets2.common.blocks.RenderBlock;
 import com.direwolf20.buildinggadgets2.common.worlddata.BG2Data;
-// TODO(datagen-port): re-import BG2BlockTags once datagen is rewritten for 26.1.
-//import com.direwolf20.buildinggadgets2.datagen.BG2BlockTags;
 import com.direwolf20.buildinggadgets2.setup.Registration;
 import com.direwolf20.buildinggadgets2.util.datatypes.StatePos;
 import com.google.common.collect.ImmutableList;
@@ -47,8 +45,7 @@ public class GadgetUtils {
     );
 
     public static boolean isValidBlockState(BlockState blockState, Level level, BlockPos blockPos) {
-        // TODO(datagen-port): re-enable BG2DENY tag check once datagen is rewritten for 26.1.
-        //if (blockState.is(BG2BlockTags.BG2DENY)) return false;
+        if (blockState.is(BG2Tags.BG2DENY)) return false;
         if (blockState.getDestroySpeed(level, blockPos) < 0) return false;
         if (!blockState.getFluidState().isEmpty() && !blockState.getFluidState().isSource()) return false;
         return true;

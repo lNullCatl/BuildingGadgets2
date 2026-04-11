@@ -1,26 +1,18 @@
 package com.direwolf20.buildinggadgets2.datagen;
-/*
+
 import com.direwolf20.buildinggadgets2.BuildingGadgets2;
 import com.direwolf20.buildinggadgets2.setup.Registration;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
-import net.minecraft.data.tags.ItemTagsProvider;
-import net.minecraft.resources.Identifier;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.tags.TagKey;
-import net.minecraft.world.item.Item;
-import net.neoforged.neoforge.common.data.BlockTagsProvider;
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
+import net.neoforged.neoforge.common.data.ItemTagsProvider;
 
 import java.util.concurrent.CompletableFuture;
 
 public class BG2ItemTags extends ItemTagsProvider {
-    private static TagKey<Item> forgeTag(String name) {
-        return ItemTags.create(Identifier.fromNamespaceAndPath("forge", name));
-    }
 
-    public BG2ItemTags(PackOutput packOutput, CompletableFuture<HolderLookup.Provider> lookupProvider, BlockTagsProvider blockTags, ExistingFileHelper helper) {
-        super(packOutput, lookupProvider, blockTags.contentsGetter(), BuildingGadgets2.MODID, helper);
+    public BG2ItemTags(PackOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, lookupProvider, BuildingGadgets2.MODID);
     }
 
     @Override
@@ -34,4 +26,3 @@ public class BG2ItemTags extends ItemTagsProvider {
         return "BuildingGadgets2 Item Tags";
     }
 }
-*/
