@@ -42,7 +42,7 @@ public class TemplateItem extends Item {
         if (!playerIn.isShiftKeyDown())
             return super.use(worldIn, playerIn, handIn);
 
-        if (worldIn.isClientSide) {
+        if (worldIn.isClientSide()) {
             ScreenOpener.openMaterialList(playerIn.getItemInHand(handIn));
         }
 

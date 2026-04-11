@@ -11,7 +11,6 @@ import com.direwolf20.buildinggadgets2.util.modes.BaseMode;
 import com.google.common.collect.ImmutableSortedSet;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
@@ -92,7 +91,7 @@ public abstract class BaseGadget extends Item {
             return;
         }
 
-        boolean sneakPressed = Screen.hasShiftDown();
+        boolean sneakPressed = Minecraft.getInstance().hasShiftDown();
 
         if (!sneakPressed) {
             tooltip.add(Component.translatable("buildinggadgets2.tooltips.holdshift",
@@ -101,7 +100,7 @@ public abstract class BaseGadget extends Item {
         } else {
             GlobalPos boundTo = GadgetNBT.getBoundPos(stack);
             if (boundTo != null) {
-                tooltip.add(Component.translatable("buildinggadgets2.tooltips.boundto", boundTo.dimension().location().getPath(), "[" + boundTo.pos().toShortString() + "]").setStyle(Styles.GOLD));
+                tooltip.add(Component.translatable("buildinggadgets2.tooltips.boundto", boundTo.dimension().identifier().getPath(), "[" + boundTo.pos().toShortString() + "]").setStyle(Styles.GOLD));
             }
         }
 
@@ -136,7 +135,7 @@ public abstract class BaseGadget extends Item {
                     GadgetNBT.toggleSetting(gadget, GadgetNBT.ToggleableSettings.BIND.getName()); //Turn off bind
                     return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
                 } else {
-                    return InteractionResult.FAIL.heldItemTransformedTo(gadget);
+                    return InteractionResult.FAIL;
                 }
             }
             return this.onShiftAction(context);
@@ -146,11 +145,11 @@ public abstract class BaseGadget extends Item {
     }
 
     InteractionResult onAction(ItemActionContext context) {
-        return InteractionResult.PASS.heldItemTransformedTo(context.stack());
+        return InteractionResult.PASS;
     }
 
     InteractionResult onShiftAction(ItemActionContext context) {
-        return InteractionResult.PASS.heldItemTransformedTo(context.stack());
+        return InteractionResult.PASS;
     }
 
     public boolean bindToInventory(Level level, Player player, ItemStack gadget, BlockHitResult lookingAt) {

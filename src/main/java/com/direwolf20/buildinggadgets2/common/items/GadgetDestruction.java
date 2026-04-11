@@ -14,7 +14,6 @@ import com.direwolf20.buildinggadgets2.util.context.ItemActionContext;
 import com.direwolf20.buildinggadgets2.util.datatypes.StatePos;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -59,7 +58,7 @@ public class GadgetDestruction extends BaseGadget {
         tooltip.add(Component.translatable("buildinggadgets2.voidwarning")
                 .withStyle(ChatFormatting.RED));
 
-        boolean sneakPressed = Screen.hasShiftDown();
+        boolean sneakPressed = Minecraft.getInstance().hasShiftDown();
 
         if (sneakPressed) {
 
@@ -91,7 +90,7 @@ public class GadgetDestruction extends BaseGadget {
         Direction anchorSide = GadgetNBT.getAnchorSide(gadget);
 
         if (context.level().getBlockState(VectorHelper.getLookingAt(context.player(), gadget).getBlockPos()) == Blocks.AIR.defaultBlockState() && anchor == null)
-            return InteractionResult.PASS.heldItemTransformedTo(gadget);
+            return InteractionResult.PASS;
 
         BlockPos startBlock = getHitPos(context);
         Direction facing = (anchorSide == null) ? context.hitResult().getDirection() : anchorSide;
@@ -109,7 +108,7 @@ public class GadgetDestruction extends BaseGadget {
 
     @Override
     InteractionResult onShiftAction(ItemActionContext context) {
-        if (context.level().isClientSide)
+        if (context.level().isClientSide())
             ScreenOpener.openDestructionScreen(context.stack());
 
         return super.onShiftAction(context);

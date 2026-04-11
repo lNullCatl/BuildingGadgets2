@@ -11,7 +11,6 @@ import com.direwolf20.buildinggadgets2.util.context.ItemActionContext;
 import com.direwolf20.buildinggadgets2.util.datatypes.StatePos;
 import com.direwolf20.buildinggadgets2.util.modes.BaseMode;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
@@ -49,7 +48,7 @@ public class GadgetBuilding extends BaseGadget {
             return;
         }
 
-        boolean sneakPressed = Screen.hasShiftDown();
+        boolean sneakPressed = Minecraft.getInstance().hasShiftDown();
 
         if (sneakPressed) {
             BaseMode mode = GadgetNBT.getMode(stack);
@@ -64,7 +63,7 @@ public class GadgetBuilding extends BaseGadget {
         var gadget = context.stack();
 
         BlockState setState = GadgetNBT.getGadgetBlockState(gadget);
-        if (setState.isAir()) return InteractionResult.PASS.heldItemTransformedTo(gadget);
+        if (setState.isAir()) return InteractionResult.PASS;
 
         var mode = GadgetNBT.getMode(gadget);
         ArrayList<StatePos> buildList = mode.collect(context.hitResult().getDirection(), context.player(), getHitPos(context), setState);

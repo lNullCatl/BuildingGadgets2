@@ -12,7 +12,6 @@ import com.direwolf20.buildinggadgets2.util.modes.Copy;
 import com.direwolf20.buildinggadgets2.util.modes.Paste;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
@@ -59,7 +58,7 @@ public class GadgetCopyPaste extends BaseGadget {
         if (!templateName.isEmpty())
             tooltip.add(Component.translatable("buildinggadgets2.templatename", templateName).withStyle(ChatFormatting.AQUA));
 
-        boolean sneakPressed = Screen.hasShiftDown();
+        boolean sneakPressed = Minecraft.getInstance().hasShiftDown();
 
         if (sneakPressed) {
 
@@ -89,7 +88,7 @@ public class GadgetCopyPaste extends BaseGadget {
             //GadgetNBT.clearAnchorPos(gadget);
             return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
         } else {
-            return InteractionResult.PASS.heldItemTransformedTo(gadget);
+            return InteractionResult.PASS;
         }
 
         return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
@@ -109,7 +108,7 @@ public class GadgetCopyPaste extends BaseGadget {
         } else if (mode.equals(new Paste())) {
             //Paste
         } else {
-            return InteractionResult.PASS.heldItemTransformedTo(gadget);
+            return InteractionResult.PASS;
         }
 
         return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);

@@ -69,7 +69,7 @@ public class TemplateManager extends Block implements EntityBlock {
 
     @Override
     public InteractionResult useWithoutItem(BlockState blockState, Level level, BlockPos blockPos, Player player, BlockHitResult hit) {
-        if (level.isClientSide)
+        if (level.isClientSide())
             return InteractionResult.SUCCESS;
 
         BlockEntity te = level.getBlockEntity(blockPos);

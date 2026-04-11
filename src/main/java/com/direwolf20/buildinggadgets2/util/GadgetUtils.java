@@ -24,7 +24,6 @@ import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -73,7 +72,7 @@ public class GadgetUtils {
     }
 
     public static ItemStack getItemForBlock(BlockState blockState, Level level, BlockPos blockPos, Player player) {
-        return blockState.getCloneItemStack(new BlockHitResult(Vec3.ZERO, Direction.UP, blockPos, false), level, blockPos, player);
+        return blockState.getCloneItemStack(blockPos, level, false, player);
     }
 
     public static List<ItemStack> getDropsForBlockState(ServerLevel level, BlockPos blockPos, BlockState blockState, Player player) {
@@ -173,7 +172,7 @@ public class GadgetUtils {
         ArrayList<StatePos> returnList = new ArrayList<>();
         BlockPos.betweenClosedStream(box).map(BlockPos::immutable).forEach(blockPos -> {
             BlockState blockState = level.getBlockState(blockPos);
-            if (!level.isClientSide) { //Only check these on server side
+            if (!level.isClientSide()) { //Only check these on server side
                 if (!level.mayInteract(player, blockPos))
                     return; //Chunk Protection like spawn and FTB Utils
                 BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(level, blockPos, level.getBlockState(blockPos), player);

@@ -15,7 +15,6 @@ import com.direwolf20.buildinggadgets2.util.modes.Cut;
 import com.direwolf20.buildinggadgets2.util.modes.Paste;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
@@ -64,7 +63,7 @@ public class GadgetCutPaste extends BaseGadget {
         if (GadgetNBT.getPasteReplace(stack))
             tooltip.add(Component.translatable("buildinggadgets2.voidwarning").withStyle(ChatFormatting.RED));
 
-        boolean sneakPressed = Screen.hasShiftDown();
+        boolean sneakPressed = Minecraft.getInstance().hasShiftDown();
 
         if (sneakPressed) {
 
@@ -83,7 +82,7 @@ public class GadgetCutPaste extends BaseGadget {
             UUID uuid = GadgetNBT.getUUID(gadget);
             if (ServerTickHandler.gadgetWorking(GadgetNBT.getUUID(gadget))) {
                 context.player().sendOverlayMessage(Component.translatable("buildinggadgets2.messages.cutinprogress"));
-                return InteractionResult.PASS.heldItemTransformedTo(gadget); // Do nothing if this gadget is already doing stuff!
+                return InteractionResult.PASS; // Do nothing if this gadget is already doing stuff!
             }
             BG2Data bg2Data = BG2Data.get(Objects.requireNonNull(context.player().level().getServer()).overworld());
             ArrayList<StatePos> buildList = bg2Data.getCopyPasteList(uuid, false); //Don't remove the data just yet
@@ -97,7 +96,7 @@ public class GadgetCutPaste extends BaseGadget {
             GadgetNBT.setMode(gadget, new Cut()); // Set it back to cut mode - no need to stay in paste since the paste is gone :)
             return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
         } else {
-            return InteractionResult.PASS.heldItemTransformedTo(gadget);
+            return InteractionResult.PASS;
         }
 
         return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);
@@ -116,7 +115,7 @@ public class GadgetCutPaste extends BaseGadget {
         } else if (mode.equals(new Paste())) {
             //Paste
         } else {
-            return InteractionResult.PASS.heldItemTransformedTo(gadget);
+            return InteractionResult.PASS;
         }
 
         return InteractionResult.SUCCESS.heldItemTransformedTo(gadget);

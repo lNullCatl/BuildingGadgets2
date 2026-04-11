@@ -55,7 +55,7 @@ public class BuildingUtils {
     }
 
     public static IItemHandler getHandlerFromBound(Player player, GlobalPos boundInventory, Direction direction) {
-        Level level = getLevel(player.getServer(), boundInventory);
+        Level level = getLevel(player.level().getServer(), boundInventory);
         if (level == null) return null;
 
         BlockEntity blockEntity = level.getBlockEntity(boundInventory.pos());
