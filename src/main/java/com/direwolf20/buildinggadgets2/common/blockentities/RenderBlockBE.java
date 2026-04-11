@@ -236,15 +236,15 @@ public class RenderBlockBE extends BlockEntity {
     @Override
     public void loadAdditional(CompoundTag tag, HolderLookup.Provider provider) {
         super.loadAdditional(tag, provider);
-        this.renderBlock = NbtUtils.readBlockState(BuiltInRegistries.BLOCK.asLookup(), tag.getCompound("renderBlock"));
-        this.sourceBlock = NbtUtils.readBlockState(BuiltInRegistries.BLOCK.asLookup(), tag.getCompound("sourceBlock"));
-        this.targetBlock = NbtUtils.readBlockState(BuiltInRegistries.BLOCK.asLookup(), tag.getCompound("targetBlock"));
-        this.shrinking = tag.getBoolean("shrinking");
-        this.exchanging = tag.getBoolean("exchanging");
-        this.drawSize = tag.getByte("drawSize");
-        this.renderType = tag.getByte("renderType");
+        this.renderBlock = NbtUtils.readBlockState(BuiltInRegistries.BLOCK, tag.getCompoundOrEmpty("renderBlock"));
+        this.sourceBlock = NbtUtils.readBlockState(BuiltInRegistries.BLOCK, tag.getCompoundOrEmpty("sourceBlock"));
+        this.targetBlock = NbtUtils.readBlockState(BuiltInRegistries.BLOCK, tag.getCompoundOrEmpty("targetBlock"));
+        this.shrinking = tag.getBooleanOr("shrinking", false);
+        this.exchanging = tag.getBooleanOr("exchanging", false);
+        this.drawSize = tag.getByteOr("drawSize", (byte) 0);
+        this.renderType = tag.getByteOr("renderType", (byte) 0);
         if (tag.contains("blockEntityData"))
-            this.blockEntityData = tag.getCompound("blockEntityData");
+            this.blockEntityData = tag.getCompoundOrEmpty("blockEntityData");
     }
 
     @Override

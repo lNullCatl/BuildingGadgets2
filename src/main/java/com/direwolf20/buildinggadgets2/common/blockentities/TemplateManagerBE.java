@@ -35,7 +35,7 @@ public class TemplateManagerBE extends BlockEntity implements MenuProvider {
     @Override
     public void loadAdditional(CompoundTag tag, HolderLookup.Provider provider) {
         if (tag.contains("Inventory"))
-            itemHandler.deserializeNBT(provider, tag.getCompound("Inventory"));
+            itemHandler.deserializeNBT(provider, tag.getCompoundOrEmpty("Inventory"));
         super.loadAdditional(tag, provider);
     }
 

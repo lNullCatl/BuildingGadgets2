@@ -13,7 +13,7 @@ import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.loading.FMLLoader;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -35,13 +35,14 @@ public class BuildingGadgets2 {
         eventBus.addListener(PacketHandler::registerNetworking);
         NeoForge.EVENT_BUS.addListener(BuildingGadgets2Commands::registerCommands);
 
-        if (FMLLoader.getDist().isClient()) {
+        if (FMLEnvironment.getDist().isClient()) {
             eventBus.addListener(ClientSetup::init);
         }
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
-        event.registerItem(Capabilities.EnergyStorage.ITEM,
+        // TODO(port, caps-rework): Capabilities.Energy.ITEM now returns EnergyHandler (not IEnergyStorage), and Capabilities.Item.BLOCK now returns ResourceHandler<ItemResource> (not IItemHandler). The lambdas below still return the old types — will fail at registration runtime. Proper fix is Priority 5 (rewrite EnergyStorageItemstack and TemplateManagerHandler against the new Transfer API, or add adapter classes). See PORTING_1.21.1_TO_26.1.md §3.15.
+        event.registerItem(Capabilities.Energy.ITEM,
                 (itemStack, context) -> new EnergyStorageItemstack(((BaseGadget) itemStack.getItem()).getEnergyMax(), itemStack),
                 Registration.Building_Gadget.get(),
                 Registration.Exchanging_Gadget.get(),
@@ -49,7 +50,7 @@ public class BuildingGadgets2 {
                 Registration.CutPaste_Gadget.get(),
                 Registration.Destruction_Gadget.get()
         );
-        event.registerBlock(Capabilities.ItemHandler.BLOCK,
+        event.registerBlock(Capabilities.Item.BLOCK,
                 (level, pos, state, be, side) -> ((TemplateManagerBE) be).itemHandler,
                 // blocks to register for
                 Registration.TemplateManager.get());

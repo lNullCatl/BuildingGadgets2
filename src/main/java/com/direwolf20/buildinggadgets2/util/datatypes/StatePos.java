@@ -34,8 +34,9 @@ public class StatePos {
             this.state = null;
             this.pos = null;
         }
-        this.state = NbtUtils.readBlockState(BuiltInRegistries.BLOCK.asLookup(), compoundTag.getCompound("blockstate"));
-        this.pos = NbtUtils.readBlockPos(compoundTag, "blockpos").orElse(BlockPos.ZERO);
+        // TODO(port): save format changed — "blockpos" is now stored as a packed long via BlockPos.asLong() / BlockPos.of(long) instead of NbtUtils.writeBlockPos. 1.21.1 worlds aren't loadable on 26.1 so this is cost-free, but flagging it explicitly.
+        this.state = NbtUtils.readBlockState(BuiltInRegistries.BLOCK, compoundTag.getCompoundOrEmpty("blockstate"));
+        this.pos = BlockPos.of(compoundTag.getLongOr("blockpos", 0L));
     }
 
     public StatePos(CompoundTag compoundTag, ArrayList<BlockState> blockStates) {
@@ -43,14 +44,14 @@ public class StatePos {
             this.state = null;
             this.pos = null;
         }
-        this.state = blockStates.get(compoundTag.getShort("blockstateshort"));
-        this.pos = BlockPos.of(compoundTag.getLong("blockpos"));
+        this.state = blockStates.get(compoundTag.getShortOr("blockstateshort", (short) 0));
+        this.pos = BlockPos.of(compoundTag.getLongOr("blockpos", 0L));
     }
 
     public CompoundTag getTag() {
         CompoundTag compoundTag = new CompoundTag();
         compoundTag.put("blockstate", NbtUtils.writeBlockState(state));
-        compoundTag.put("blockpos", NbtUtils.writeBlockPos(pos));
+        compoundTag.putLong("blockpos", pos.asLong());
         return compoundTag;
     }
 
@@ -131,7 +132,7 @@ public class StatePos {
     public static ArrayList<BlockState> getBlockStateMapFromNBT(ListTag listTag) {
         ArrayList<BlockState> blockStateMap = new ArrayList<>();
         for (int i = 0; i < listTag.size(); i++) {
-            BlockState blockState = NbtUtils.readBlockState(BuiltInRegistries.BLOCK.asLookup(), listTag.getCompound(i));
+            BlockState blockState = NbtUtils.readBlockState(BuiltInRegistries.BLOCK, listTag.getCompoundOrEmpty(i));
             blockStateMap.add(blockState);
         }
         return blockStateMap;

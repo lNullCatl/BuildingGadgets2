@@ -67,7 +67,7 @@ public abstract class BaseMode implements Comparable<BaseMode> {
     public boolean isPosValid(Level level, Player player, BlockPos blockPos, BlockState blockState) {
         ItemStack gadget = BaseGadget.getGadget(player);
         if (!isExchangingValid(level, player, blockPos, gadget)) return false;
-        if ((blockPos.getY() >= level.getMaxBuildHeight() || blockPos.getY() < level.getMinBuildHeight()))
+        if ((blockPos.getY() >= level.getMaxY() || blockPos.getY() < level.getMinY()))
             return false;
         if (!blockState.canSurvive(level, blockPos)) return false; //Seeds on tilled earth, cactus, sugarcane, etc
         if (!level.mayInteract(player, blockPos)) return false; //Chunk Protection like spawn and FTB Utils

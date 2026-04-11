@@ -18,7 +18,7 @@ import net.neoforged.neoforge.client.event.RegisterClientTooltipComponentFactori
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
-@EventBusSubscriber(modid = BuildingGadgets2.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = BuildingGadgets2.MODID, value = Dist.CLIENT)
 public class ClientSetup {
     public static void init(final FMLClientSetupEvent event) {
         NeoForge.EVENT_BUS.addListener(KeyBindings::onClientInput);

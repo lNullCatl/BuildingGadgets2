@@ -5,9 +5,10 @@ import com.direwolf20.buildinggadgets2.common.events.ServerTickHandler;
 import com.direwolf20.buildinggadgets2.common.items.BaseGadget;
 import com.direwolf20.buildinggadgets2.common.items.GadgetBuilding;
 import com.direwolf20.buildinggadgets2.common.worlddata.BG2Data;
-import com.direwolf20.buildinggadgets2.integration.AE2Integration;
-import com.direwolf20.buildinggadgets2.integration.CuriosIntegration;
-import com.direwolf20.buildinggadgets2.integration.CuriosMethods;
+// TODO(port, caps-rework): re-enable AE2/Curios imports when Transfer API port is done
+// import com.direwolf20.buildinggadgets2.integration.AE2Integration;
+// import com.direwolf20.buildinggadgets2.integration.CuriosIntegration;
+// import com.direwolf20.buildinggadgets2.integration.CuriosMethods;
 import com.direwolf20.buildinggadgets2.util.datatypes.StatePos;
 import com.direwolf20.buildinggadgets2.util.datatypes.TagPos;
 import net.minecraft.core.BlockPos;
@@ -41,7 +42,8 @@ import net.neoforged.neoforge.items.ItemHandlerHelper;
 
 import java.util.*;
 
-import static com.direwolf20.buildinggadgets2.integration.AE2Methods.*;
+// TODO(port, caps-rework): re-enable AE2Methods static import when Transfer API port is done
+// import static com.direwolf20.buildinggadgets2.integration.AE2Methods.*;
 
 public class BuildingUtils {
 
@@ -177,10 +179,11 @@ public class BuildingUtils {
         if (fluidStack.isEmpty()) return false;
         //Check Bound Inventory First
         if (boundInventory != null) {
-            if (AE2Integration.isLoaded()) { //Check if we are bound to an AE Device
-                checkAE2ForFluids(boundInventory, player, fluidStack, simulate);
-                if (fluidStack.isEmpty()) return true;
-            }
+            // TODO(port, caps-rework): load-bearing — AE2 bound inventory fluid extraction silently skipped
+            // if (AE2Integration.isLoaded()) { //Check if we are bound to an AE Device
+            //     checkAE2ForFluids(boundInventory, player, fluidStack, simulate);
+            //     if (fluidStack.isEmpty()) return true;
+            // }
             IItemHandler boundHandler = getHandlerFromBound(player, boundInventory, direction);
             if (boundHandler != null) {
                 checkItemHandlerForFluids(boundHandler, fluidStack, simulate);
@@ -189,9 +192,10 @@ public class BuildingUtils {
 
         if (fluidStack.isEmpty()) return true;
         //Check curious slots second:
-        if (CuriosIntegration.isLoaded()) {
-            CuriosMethods.removeFluidStacksFromInventory(player, fluidStack, simulate);
-        }
+        // TODO(port, caps-rework): load-bearing — Curios-slot fluid extraction silently skipped
+        // if (CuriosIntegration.isLoaded()) {
+        //     CuriosMethods.removeFluidStacksFromInventory(player, fluidStack, simulate);
+        // }
         if (fluidStack.isEmpty()) return true;
 
         Inventory playerInventory = player.getInventory();
@@ -246,10 +250,11 @@ public class BuildingUtils {
         ArrayList<ItemStack> testArray = new ArrayList<>(itemStacks);
         //Check Bound Inventory First
         if (boundInventory != null) {
-            if (AE2Integration.isLoaded()) { //Check if we are bound to an AE Device
-                checkAE2ForItems(boundInventory, player, testArray, simulate);
-                if (testArray.isEmpty()) return true;
-            }
+            // TODO(port, caps-rework): load-bearing — AE2 bound inventory item extraction silently skipped
+            // if (AE2Integration.isLoaded()) { //Check if we are bound to an AE Device
+            //     checkAE2ForItems(boundInventory, player, testArray, simulate);
+            //     if (testArray.isEmpty()) return true;
+            // }
             IItemHandler boundHandler = getHandlerFromBound(player, boundInventory, direction);
             if (boundHandler != null) {
                 checkHandlerForItems(boundHandler, testArray, simulate);
@@ -259,9 +264,10 @@ public class BuildingUtils {
         if (testArray.isEmpty()) return true;
         //Check curious slots second:
 
-        if (CuriosIntegration.isLoaded()) {
-            CuriosMethods.removeStacksFromInventory(player, testArray, simulate);
-        }
+        // TODO(port, caps-rework): load-bearing — Curios-slot item extraction silently skipped
+        // if (CuriosIntegration.isLoaded()) {
+        //     CuriosMethods.removeStacksFromInventory(player, testArray, simulate);
+        // }
         if (testArray.isEmpty()) return true;
 
         Inventory playerInventory = player.getInventory();
@@ -276,9 +282,10 @@ public class BuildingUtils {
         final int[] counter = {0};
 
         //Check curious slots first:
-        if (CuriosIntegration.isLoaded()) {
-            CuriosMethods.countItemStacks(player, itemStack, counter);
-        }
+        // TODO(port, caps-rework): load-bearing — Curios-slot item counting silently skipped
+        // if (CuriosIntegration.isLoaded()) {
+        //     CuriosMethods.countItemStacks(player, itemStack, counter);
+        // }
 
         for (int i = 0; i < playerInventory.getContainerSize(); i++) {
             ItemStack slotStack = playerInventory.getItem(i);
@@ -300,10 +307,11 @@ public class BuildingUtils {
     public static void giveFluidToPlayer(Player player, FluidStack returnedFluid, GlobalPos boundInventory, Direction direction) {
         //Check Bound Inventory First
         if (boundInventory != null) {
-            if (AE2Integration.isLoaded()) { //Check if we are bound to an AE Device
-                insertFluidIntoAE2(player, boundInventory, returnedFluid);
-                if (returnedFluid.isEmpty()) return;
-            }
+            // TODO(port, caps-rework): load-bearing — AE2 bound inventory fluid insertion silently skipped
+            // if (AE2Integration.isLoaded()) { //Check if we are bound to an AE Device
+            //     insertFluidIntoAE2(player, boundInventory, returnedFluid);
+            //     if (returnedFluid.isEmpty()) return;
+            // }
             IItemHandler boundHandler = getHandlerFromBound(player, boundInventory, direction);
             if (boundHandler != null) {
                 insertFluidIntoItemHandler(boundHandler, returnedFluid, false);
@@ -312,9 +320,10 @@ public class BuildingUtils {
         if (returnedFluid.isEmpty()) return;
 
         //Look for matching itemstacks inside curios inventories second - if found, insert there!
-        if (CuriosIntegration.isLoaded()) {
-            CuriosMethods.giveFluidToPlayer(player, returnedFluid);
-        }
+        // TODO(port, caps-rework): load-bearing — Curios-slot fluid insertion silently skipped
+        // if (CuriosIntegration.isLoaded()) {
+        //     CuriosMethods.giveFluidToPlayer(player, returnedFluid);
+        // }
         //Now look inside the players inventory
         Inventory playerInventory = player.getInventory();
         for (int i = 0; i < playerInventory.getContainerSize(); i++) { //If this fails the fluid just gets voided!
@@ -341,10 +350,11 @@ public class BuildingUtils {
         //Check Bound Inventory First
         ItemStack tempReturnedItem = returnedItem.copy();
         if (boundInventory != null) {
-            if (AE2Integration.isLoaded()) { //Check if we are bound to an AE Device
-                insertIntoAE2(player, boundInventory, tempReturnedItem);
-                if (tempReturnedItem.isEmpty()) return;
-            }
+            // TODO(port, caps-rework): load-bearing — AE2 bound inventory item insertion silently skipped
+            // if (AE2Integration.isLoaded()) { //Check if we are bound to an AE Device
+            //     insertIntoAE2(player, boundInventory, tempReturnedItem);
+            //     if (tempReturnedItem.isEmpty()) return;
+            // }
             IItemHandler boundHandler = getHandlerFromBound(player, boundInventory, direction);
             if (boundHandler != null) {
                 tempReturnedItem = ItemHandlerHelper.insertItemStacked(boundHandler, returnedItem, false);
@@ -354,10 +364,11 @@ public class BuildingUtils {
         ItemStack realReturnedItem = tempReturnedItem.copy();
 
         //Look for matching itemstacks inside curios inventories second - if found, insert there!
-        if (CuriosIntegration.isLoaded()) {
-            CuriosMethods.giveItemToPlayer(player, realReturnedItem);
-            if (realReturnedItem.isEmpty()) return;
-        }
+        // TODO(port, caps-rework): load-bearing — Curios-slot item insertion silently skipped
+        // if (CuriosIntegration.isLoaded()) {
+        //     CuriosMethods.giveItemToPlayer(player, realReturnedItem);
+        //     if (realReturnedItem.isEmpty()) return;
+        // }
         //Now look for bags inside the players inventory
         Inventory playerInventory = player.getInventory();
         for (int i = 0; i < playerInventory.getContainerSize(); i++) {

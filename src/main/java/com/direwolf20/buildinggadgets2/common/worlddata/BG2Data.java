@@ -7,9 +7,9 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -158,8 +158,8 @@ public class BG2Data extends SavedData {
      */
     public static BlockPos readBlockPos(CompoundTag compoundTag, String pKey) {
         if (!compoundTag.contains(pKey)) return BlockPos.ZERO;
-        CompoundTag tag = compoundTag.getCompound(pKey);
-        return new BlockPos(tag.getInt("X"), tag.getInt("Y"), tag.getInt("Z"));
+        CompoundTag tag = compoundTag.getCompoundOrEmpty(pKey);
+        return new BlockPos(tag.getIntOr("X", 0), tag.getIntOr("Y", 0), tag.getIntOr("Z", 0));
     }
 
     public static CompoundTag writeBlockPos(BlockPos pPos) {
@@ -173,11 +173,11 @@ public class BG2Data extends SavedData {
     public static ArrayList<StatePos> statePosListFromNBTMapArray(CompoundTag tag) {
         ArrayList<StatePos> statePosList = new ArrayList<>();
         if (!tag.contains("blockstatemap") || !tag.contains("statelist")) return statePosList;
-        ArrayList<BlockState> blockStateMap = StatePos.getBlockStateMapFromNBT(tag.getList("blockstatemap", Tag.TAG_COMPOUND));
+        ArrayList<BlockState> blockStateMap = StatePos.getBlockStateMapFromNBT(tag.getListOrEmpty("blockstatemap"));
         BlockPos start = readBlockPos(tag, "startpos");
         BlockPos end = readBlockPos(tag, "endpos");
         AABB aabb = VecHelpers.aabbFromBlockPos(start, end);
-        int[] blocklist = tag.getIntArray("statelist");
+        int[] blocklist = tag.getIntArray("statelist").orElse(new int[0]);
         final int[] counter = {0};
         BlockPos.betweenClosedStream(aabb).map(BlockPos::immutable).forEach(pos -> {
             int blockStateLookup = blocklist[counter[0]++];
@@ -192,7 +192,7 @@ public class BG2Data extends SavedData {
         ListTag undoTagList = new ListTag();
         for (Map.Entry<UUID, ArrayList<StatePos>> entry : undoList.entrySet()) {
             CompoundTag tempTag = new CompoundTag();
-            tempTag.putUUID("uuid", entry.getKey());
+            tempTag.putIntArray("uuid", UUIDUtil.uuidToIntArray(entry.getKey()));
             ListTag tempList = new ListTag();
             for (StatePos statePos : entry.getValue()) {
                 tempList.add(statePos.getTag());
@@ -205,7 +205,7 @@ public class BG2Data extends SavedData {
         ListTag copyPasteTag = new ListTag();
         for (Map.Entry<UUID, ArrayList<StatePos>> entry : copyPasteLookup.entrySet()) {
             CompoundTag tempTag = new CompoundTag();
-            tempTag.putUUID("uuid", entry.getKey());
+            tempTag.putIntArray("uuid", UUIDUtil.uuidToIntArray(entry.getKey()));
             tempTag.put("stateposlist", statePosListToNBTMapArray(entry.getValue()));
             copyPasteTag.add(tempTag);
         }
@@ -214,7 +214,7 @@ public class BG2Data extends SavedData {
         ListTag teMapTag = new ListTag();
         for (Map.Entry<UUID, ArrayList<TagPos>> entry : teMap.entrySet()) {
             CompoundTag tempTag = new CompoundTag();
-            tempTag.putUUID("uuid", entry.getKey());
+            tempTag.putIntArray("uuid", UUIDUtil.uuidToIntArray(entry.getKey()));
             ListTag tempList = new ListTag();
             for (TagPos tagPos : entry.getValue()) {
                 tempList.add(tagPos.getTag());
@@ -227,7 +227,7 @@ public class BG2Data extends SavedData {
         ListTag redprintTag = new ListTag();
         for (Map.Entry<UUID, String> entry : redprintLookup.entrySet()) {
             CompoundTag tempTag = new CompoundTag();
-            tempTag.putUUID("uuid", entry.getKey());
+            tempTag.putIntArray("uuid", UUIDUtil.uuidToIntArray(entry.getKey()));
             tempTag.putString("name", entry.getValue());
             redprintTag.add(tempTag);
         }
@@ -236,44 +236,49 @@ public class BG2Data extends SavedData {
     }
 
     public static BG2Data readNbt(CompoundTag nbt, HolderLookup.Provider provider) {
+        // TODO(port): CompoundTag getters are now Optional-returning; UUID/list/compound accessors use the *Or/*OrEmpty variants. UUIDs are now stored as int arrays via UUIDUtil, no longer a tag-native type.
         HashMap<UUID, ArrayList<StatePos>> undoList = new HashMap<>();
-        ListTag undoTagList = nbt.getList("undolist", Tag.TAG_COMPOUND);
+        ListTag undoTagList = nbt.getListOrEmpty("undolist");
         for (int i = 0; i < undoTagList.size(); i++) {
-            UUID uuid = undoTagList.getCompound(i).getUUID("uuid");
-            ListTag statePosList = undoTagList.getCompound(i).getList("stateposlist", CompoundTag.TAG_COMPOUND);
+            CompoundTag entryTag = undoTagList.getCompoundOrEmpty(i);
+            UUID uuid = UUIDUtil.uuidFromIntArray(entryTag.getIntArray("uuid").orElse(new int[]{0, 0, 0, 0}));
+            ListTag statePosList = entryTag.getListOrEmpty("stateposlist");
             ArrayList<StatePos> tempList = new ArrayList<>();
             for (int j = 0; j < statePosList.size(); j++) {
-                tempList.add(new StatePos(statePosList.getCompound(j)));
+                tempList.add(new StatePos(statePosList.getCompoundOrEmpty(j)));
             }
             undoList.put(uuid, tempList);
         }
 
         HashMap<UUID, ArrayList<StatePos>> copyPaste = new HashMap<>();
-        ListTag copyPasteList = nbt.getList("copypaste", Tag.TAG_COMPOUND);
+        ListTag copyPasteList = nbt.getListOrEmpty("copypaste");
         for (int i = 0; i < copyPasteList.size(); i++) {
-            UUID uuid = copyPasteList.getCompound(i).getUUID("uuid");
-            CompoundTag statePosList = copyPasteList.getCompound(i).getCompound("stateposlist");
+            CompoundTag entryTag = copyPasteList.getCompoundOrEmpty(i);
+            UUID uuid = UUIDUtil.uuidFromIntArray(entryTag.getIntArray("uuid").orElse(new int[]{0, 0, 0, 0}));
+            CompoundTag statePosList = entryTag.getCompoundOrEmpty("stateposlist");
             copyPaste.put(uuid, statePosListFromNBTMapArray(statePosList));
         }
 
         HashMap<UUID, ArrayList<TagPos>> teMap = new HashMap<>();
-        ListTag teMapListTag = nbt.getList("temaptag", Tag.TAG_COMPOUND);
+        ListTag teMapListTag = nbt.getListOrEmpty("temaptag");
         for (int i = 0; i < teMapListTag.size(); i++) {
-            UUID uuid = teMapListTag.getCompound(i).getUUID("uuid");
-            ListTag temaplistTag = teMapListTag.getCompound(i).getList("temaplist", Tag.TAG_COMPOUND);
+            CompoundTag entryTag = teMapListTag.getCompoundOrEmpty(i);
+            UUID uuid = UUIDUtil.uuidFromIntArray(entryTag.getIntArray("uuid").orElse(new int[]{0, 0, 0, 0}));
+            ListTag temaplistTag = entryTag.getListOrEmpty("temaplist");
             ArrayList<TagPos> tagPosList = new ArrayList<>();
             for (int j = 0; j < temaplistTag.size(); j++) {
-                TagPos tagPos = new TagPos(temaplistTag.getCompound(j));
+                TagPos tagPos = new TagPos(temaplistTag.getCompoundOrEmpty(j));
                 tagPosList.add(tagPos);
             }
             teMap.put(uuid, tagPosList);
         }
 
         BiMap<UUID, String> redPrints = HashBiMap.create();
-        ListTag redPrintsTag = nbt.getList("redprinttag", Tag.TAG_COMPOUND);
+        ListTag redPrintsTag = nbt.getListOrEmpty("redprinttag");
         for (int i = 0; i < redPrintsTag.size(); i++) {
-            UUID uuid = redPrintsTag.getCompound(i).getUUID("uuid");
-            String name = redPrintsTag.getCompound(i).getString("name");
+            CompoundTag entryTag = redPrintsTag.getCompoundOrEmpty(i);
+            UUID uuid = UUIDUtil.uuidFromIntArray(entryTag.getIntArray("uuid").orElse(new int[]{0, 0, 0, 0}));
+            String name = entryTag.getStringOr("name", "");
             redPrints.put(uuid, name);
         }
         return new BG2Data(undoList, copyPaste, teMap, redPrints);

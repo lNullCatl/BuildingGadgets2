@@ -34,7 +34,8 @@ public class KeyBindings {
     public static KeyMapping range = createBinding("range", GLFW.GLFW_KEY_R);
 
     private static KeyMapping createBinding(String name, int key) {
-        KeyMapping keyBinding = new KeyMapping(getKey(name), CONFLICT_CONTEXT_GADGET, InputConstants.Type.KEYSYM.getOrCreate(key), getKey("category"));
+        // TODO(port): keybind category was the lang key "key.buildinggadgets2.category"; 26.1 requires a KeyMapping.Category record. Using GAMEPLAY for now; revisit to register a dedicated BG2 category via RegisterKeyMappingsEvent#registerCategory.
+        KeyMapping keyBinding = new KeyMapping(getKey(name), CONFLICT_CONTEXT_GADGET, InputConstants.Type.KEYSYM.getOrCreate(key), KeyMapping.Category.GAMEPLAY);
         keyMappings.add(keyBinding);
         return keyBinding;
     }
