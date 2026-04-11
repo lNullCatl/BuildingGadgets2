@@ -121,7 +121,7 @@ public class GadgetCopyPaste extends BaseGadget {
         GadgetNBT.setCopyUUID(gadget); //This UUID will be used to determine if the copy/paste we are rendering from the cache is old or not.
         BG2Data bg2Data = BG2Data.get(Objects.requireNonNull(context.player().level().getServer()).overworld());
         bg2Data.addToCopyPaste(uuid, buildList);
-        context.player().displayClientMessage(Component.translatable("buildinggadgets2.messages.copyblocks", buildList.size()), true);
+        context.player().sendOverlayMessage(Component.translatable("buildinggadgets2.messages.copyblocks", buildList.size()));
     }
 
     /**

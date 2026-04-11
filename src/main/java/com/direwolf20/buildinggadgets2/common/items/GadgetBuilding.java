@@ -82,7 +82,7 @@ public class GadgetBuilding extends BaseGadget {
     InteractionResult onShiftAction(ItemActionContext context) {
         BlockState blockState = context.level().getBlockState(context.pos());
         if (!GadgetUtils.isValidBlockState(blockState, context.level(), context.pos()) || blockState.getBlock() instanceof RenderBlock) {
-            context.player().displayClientMessage(Component.translatable("buildinggadgets2.messages.invalidblock"), true);
+            context.player().sendOverlayMessage(Component.translatable("buildinggadgets2.messages.invalidblock"));
             return super.onShiftAction(context);
         }
         if (GadgetUtils.setBlockState(context.stack(), blockState))

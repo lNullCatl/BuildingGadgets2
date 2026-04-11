@@ -160,16 +160,16 @@ public abstract class BaseGadget extends Item {
             if (itemHandler != null) {
                 GadgetNBT.setBoundPos(gadget, new GlobalPos(level.dimension(), lookingAt.getBlockPos()));
                 GadgetNBT.setToolValue(gadget, lookingAt.getDirection().ordinal(), GadgetNBT.IntSettings.BIND_DIRECTION.getName());
-                player.displayClientMessage(Component.translatable("buildinggadgets2.messages.bindsuccess", lookingAt.getBlockPos().toShortString()), true);
+                player.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.bindsuccess", lookingAt.getBlockPos().toShortString()));
                 return true;
             }
         }
         GlobalPos existingBind = GadgetNBT.getBoundPos(gadget);
         if (existingBind == null)
-            player.displayClientMessage(Component.translatable("buildinggadgets2.messages.bindfailed"), true);
+            player.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.bindfailed"));
         else {
             GadgetNBT.clearBoundPos(gadget);
-            player.displayClientMessage(Component.translatable("buildinggadgets2.messages.bindremoved"), true);
+            player.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.bindremoved"));
             return true;
         }
         return false;
@@ -224,7 +224,7 @@ public abstract class BaseGadget extends Item {
         ArrayList<StatePos> undoList = bg2Data.peekUndoList(undoUUID);
         for (StatePos statePos : undoList) {
             if (!level.isLoaded(statePos.pos)) {
-                player.displayClientMessage(Component.translatable("buildinggadgets2.messages.undofailedunloaded", statePos.pos.toShortString()), true);
+                player.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.undofailedunloaded", statePos.pos.toShortString()));
                 return false;
             }
         }

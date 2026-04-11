@@ -464,7 +464,7 @@ public class BuildingUtils {
                 }
             }
             if (!player.isCreative() && !hasEnoughEnergy(gadget)) {
-                player.displayClientMessage(Component.translatable("buildinggadgets2.messages.outofpower"), true);
+                player.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.outofpower"));
                 break; //Break out if we're out of power
             }
             if (!player.isCreative()) {
@@ -513,7 +513,7 @@ public class BuildingUtils {
                 }
             }
             if (!player.isCreative() && !hasEnoughEnergy(gadget)) {
-                player.displayClientMessage(Component.translatable("buildinggadgets2.messages.outofpower"), true);
+                player.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.outofpower"));
                 break; //Break out if we're out of power
             }
             if (!player.isCreative()) {
@@ -546,7 +546,7 @@ public class BuildingUtils {
         for (BlockPos pos : blockPosList) {
             if (!level.mayInteract(player, pos)) continue; //Chunk Protection like spawn and FTB Utils
             if (!player.isCreative() && !hasEnoughEnergy(gadget)) {
-                player.displayClientMessage(Component.translatable("buildinggadgets2.messages.outofpower"), true);
+                player.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.outofpower"));
                 break; //Break out if we're out of power
             }
             BlockState oldState = level.getBlockState(pos);

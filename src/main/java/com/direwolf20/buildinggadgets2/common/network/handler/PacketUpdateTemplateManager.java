@@ -64,7 +64,7 @@ public class PacketUpdateTemplateManager {
 
                 if (templateStack.is(Registration.Redprint.get())) {
                     if (payload.templateName().isEmpty()) {
-                        player.displayClientMessage(Component.translatable("buildinggadgets2.messages.namerequired"), true);
+                        player.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.namerequired"));
                         playSound((ServerPlayer) player, Holder.direct(SoundEvent.createVariableRangeEvent(Identifier.parse(SoundEvents.WAXED_SIGN_INTERACT_FAIL.getLocation().toString()))));
                         return;
                     }
@@ -103,7 +103,7 @@ public class PacketUpdateTemplateManager {
         BG2Data bg2Data = BG2Data.get(Objects.requireNonNull(sender.level().getServer()).overworld());
         if (targetStack.is(Registration.Redprint.get())) {
             if (!bg2Data.addToRedprints(targetUUID, templateName)) {
-                sender.displayClientMessage(Component.translatable("buildinggadgets2.messages.namealreadyexists"), true);
+                sender.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.namealreadyexists"));
                 playSound(sender, Holder.direct(SoundEvent.createVariableRangeEvent(Identifier.parse(SoundEvents.WAXED_SIGN_INTERACT_FAIL.getLocation().toString()))));
                 return;
             }

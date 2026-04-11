@@ -82,7 +82,7 @@ public class GadgetCutPaste extends BaseGadget {
         } else if (mode.getId().getPath().equals("paste")) {
             UUID uuid = GadgetNBT.getUUID(gadget);
             if (ServerTickHandler.gadgetWorking(GadgetNBT.getUUID(gadget))) {
-                context.player().displayClientMessage(Component.translatable("buildinggadgets2.messages.cutinprogress"), true);
+                context.player().sendOverlayMessage(Component.translatable("buildinggadgets2.messages.cutinprogress"));
                 return InteractionResult.PASS.heldItemTransformedTo(gadget); // Do nothing if this gadget is already doing stuff!
             }
             BG2Data bg2Data = BG2Data.get(Objects.requireNonNull(context.player().level().getServer()).overworld());
@@ -139,28 +139,28 @@ public class GadgetCutPaste extends BaseGadget {
         AABB area = VecHelpers.aabbFromBlockPos(cutStart, cutEnd);
         int maxAxis = 500; //Todo Config?
         if (area.getXsize() > maxAxis) {
-            player.displayClientMessage(Component.translatable("buildinggadgets2.messages.axistoolarge", "x", maxAxis, area.getXsize()), false);
+            player.sendSystemMessage(Component.translatable("buildinggadgets2.messages.axistoolarge", "x", maxAxis, area.getXsize()));
             return;
         }
         if (area.getYsize() > maxAxis) {
-            player.displayClientMessage(Component.translatable("buildinggadgets2.messages.axistoolarge", "y", maxAxis, area.getYsize()), false);
+            player.sendSystemMessage(Component.translatable("buildinggadgets2.messages.axistoolarge", "y", maxAxis, area.getYsize()));
             return;
         }
         if (area.getZsize() > maxAxis) {
-            player.displayClientMessage(Component.translatable("buildinggadgets2.messages.axistoolarge", "z", maxAxis, area.getZsize()), false);
+            player.sendSystemMessage(Component.translatable("buildinggadgets2.messages.axistoolarge", "z", maxAxis, area.getZsize()));
             return;
         }
         Stream<BlockPos> areaStream = BlockPos.betweenClosedStream(area);
         long size = areaStream.count();
         int maxSize = 100000; //Todo Config?
         if (size > maxSize) {
-            player.displayClientMessage(Component.translatable("buildinggadgets2.messages.areatoolarge", maxSize, size), false);
+            player.sendSystemMessage(Component.translatable("buildinggadgets2.messages.areatoolarge", maxSize, size));
             return;
         }
 
         int totalCost = gadgetCutPaste.getEnergyCost() * (int) size;
         if (!player.isCreative() && !BuildingUtils.hasEnoughEnergy(heldItem, totalCost)) {
-            player.displayClientMessage(Component.translatable("buildinggadgets2.messages.notenoughenergy", totalCost, BuildingUtils.getEnergyStored(heldItem)), false);
+            player.sendSystemMessage(Component.translatable("buildinggadgets2.messages.notenoughenergy", totalCost, BuildingUtils.getEnergyStored(heldItem)));
             return;
         }
 
@@ -174,7 +174,7 @@ public class GadgetCutPaste extends BaseGadget {
         ServerTickHandler.setCutStart(buildUUID, cutStart);
         GadgetNBT.setCopyStartPos(gadget, GadgetNBT.nullPos);
         GadgetNBT.setCopyEndPos(gadget, GadgetNBT.nullPos);
-        player.displayClientMessage(Component.translatable("buildinggadgets2.messages.cutblocks", size), true);
+        player.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.cutblocks", size));
 
         UUID uuid = GadgetNBT.getUUID(gadget);
         GadgetNBT.setCopyUUID(gadget, buildUUID); //This UUID will be used to determine if the copy/paste we are rendering from the cache is old or not.

@@ -22,23 +22,21 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.ARGB;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.PacketDistributor;
-import org.joml.Matrix4f;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import org.joml.Matrix3x2fStack;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -86,7 +84,7 @@ public class ModeRadialMenu extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 
     }
 
@@ -104,7 +102,7 @@ public class ModeRadialMenu extends Screen {
 
         Button rayTrace = new PositionedIconActionable(Component.translatable("buildinggadgets2.radialmenu.raytracefluids"), "raytrace_fluid", ScreenPosition.RIGHT, send -> {
             if (send) {
-                PacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.RAYTRACE_FLUID.getName()));
+                ClientPacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.RAYTRACE_FLUID.getName()));
             }
 
             return GadgetNBT.getSetting(tool, GadgetNBT.ToggleableSettings.RAYTRACE_FLUID.getName());
@@ -115,7 +113,7 @@ public class ModeRadialMenu extends Screen {
         if (tool.getItem() instanceof GadgetBuilding) {
             Button placeOnTop = new PositionedIconActionable(Component.translatable("buildinggadgets2.screen.placeatop"), "building_place_atop", ScreenPosition.RIGHT, true, send -> {
                 if (send) {
-                    PacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.PLACE_ON_TOP.getName()));
+                    ClientPacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.PLACE_ON_TOP.getName()));
                 }
 
                 return GadgetNBT.getSetting(tool, GadgetNBT.ToggleableSettings.PLACE_ON_TOP.getName());
@@ -136,7 +134,7 @@ public class ModeRadialMenu extends Screen {
         if (tool.getItem() instanceof GadgetExchanger) {
             Button affectTiles = new PositionedIconActionable(Component.translatable("buildinggadgets2.screen.affecttiles"), "affecttiles", ScreenPosition.RIGHT, true, send -> {
                 if (send) {
-                    PacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.AFFECT_TILES.getName()));
+                    ClientPacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.AFFECT_TILES.getName()));
                 }
 
                 return GadgetNBT.getSetting(tool, GadgetNBT.ToggleableSettings.AFFECT_TILES.getName());
@@ -149,16 +147,16 @@ public class ModeRadialMenu extends Screen {
             addRenderableWidget(new PositionedIconActionable(Component.translatable("buildinggadgets2.radialmenu.cut"), "cut", ScreenPosition.LEFT, false, send -> {
                 if (send) {
                     if (GadgetNBT.hasCopyUUID(tool) && !cutForSure) {
-                        this.getMinecraft().player.displayClientMessage(Component.translatable("buildinggadgets2.messages.overwritecut"), true);
+                        this.getMinecraft().player.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.overwritecut"));
                         cutForSure = true;
                         return false;
                     }
-                    PacketDistributor.sendToServer(new CutPayload());
+                    ClientPacketDistributor.sendToServer(new CutPayload());
 
                     int modeIndex = arrayOfModes.indexOf(mode);
                     modeIndex = modeIndex == 0 ? 1 : 0;
 
-                    PacketDistributor.sendToServer(new ModeSwitchPayload(false, arrayOfModes.get(modeIndex).getId()));
+                    ClientPacketDistributor.sendToServer(new ModeSwitchPayload(false, arrayOfModes.get(modeIndex).getId()));
                     mode = arrayOfModes.get(modeIndex);
                 }
 
@@ -186,7 +184,7 @@ public class ModeRadialMenu extends Screen {
         if (tool.getItem() instanceof GadgetCutPaste || tool.getItem() instanceof GadgetCopyPaste) {
             Button pastereplace = new PositionedIconActionable(Component.translatable("buildinggadgets2.screen.paste_replace"), "paste_replace", ScreenPosition.RIGHT, true, send -> {
                 if (send) {
-                    PacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.PASTE_REPLACE.getName()));
+                    ClientPacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.PASTE_REPLACE.getName()));
                 }
 
                 return GadgetNBT.getPasteReplace(tool);
@@ -209,7 +207,7 @@ public class ModeRadialMenu extends Screen {
 
             addRenderableWidget(new PositionedIconActionable(Component.translatable("buildinggadgets2.radialmenu.rotate"), "rotate", ScreenPosition.LEFT, false, send -> {
                 if (send) {
-                    PacketDistributor.sendToServer(new RotatePayload());
+                    ClientPacketDistributor.sendToServer(new RotatePayload());
                 }
 
                 return false;
@@ -220,7 +218,7 @@ public class ModeRadialMenu extends Screen {
         if (!(tool.getItem() instanceof GadgetCutPaste)) {
             Button undo_button = new PositionedIconActionable(Component.translatable("buildinggadgets2.radialmenu.undo"), "undo", ScreenPosition.LEFT, false, send -> {
                 if (send) {
-                    PacketDistributor.sendToServer(new UndoPayload());
+                    ClientPacketDistributor.sendToServer(new UndoPayload());
                 }
 
                 return false;
@@ -229,7 +227,7 @@ public class ModeRadialMenu extends Screen {
 
             Button bind_button = new PositionedIconActionable(Component.translatable("buildinggadgets2.radialmenu.bind"), "building_place_atop", ScreenPosition.LEFT, true, send -> {
                 if (send) {
-                    PacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.BIND.getName()));
+                    ClientPacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.BIND.getName()));
                 }
 
                 return GadgetNBT.getSetting(tool, GadgetNBT.ToggleableSettings.BIND.getName());
@@ -239,7 +237,7 @@ public class ModeRadialMenu extends Screen {
 
         Button fuzzy_button = new PositionedIconActionable(Component.translatable("buildinggadgets2.radialmenu.fuzzy"), "fuzzy", ScreenPosition.RIGHT, send -> {
             if (send) {
-                PacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.FUZZY.getName()));
+                ClientPacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.FUZZY.getName()));
             }
 
             return GadgetNBT.getSetting(this.getGadget(), GadgetNBT.ToggleableSettings.FUZZY.getName());
@@ -249,7 +247,7 @@ public class ModeRadialMenu extends Screen {
 
         Button connected_button = new PositionedIconActionable(Component.translatable("buildinggadgets2.radialmenu.connected_area"), "connected_area", ScreenPosition.RIGHT, send -> {
             if (send) {
-                PacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.CONNECTED_AREA.getName()));
+                ClientPacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.CONNECTED_AREA.getName()));
             }
 
             return GadgetNBT.getSetting(this.getGadget(), GadgetNBT.ToggleableSettings.CONNECTED_AREA.getName());
@@ -259,7 +257,7 @@ public class ModeRadialMenu extends Screen {
 
         addRenderableWidget(new PositionedIconActionable(Component.translatable("buildinggadgets2.radialmenu.anchor"), "anchor", ScreenPosition.LEFT, send -> {
             if (send) {
-                PacketDistributor.sendToServer(new AnchorPayload());
+                ClientPacketDistributor.sendToServer(new AnchorPayload());
             }
 
             return !GadgetNBT.getAnchorPos(tool).equals(GadgetNBT.nullPos);
@@ -269,7 +267,7 @@ public class ModeRadialMenu extends Screen {
             if (send) {
                 renderType = renderType.next();
                 renderTypeButton.setMessage(Component.translatable(renderType.getLang()));
-                PacketDistributor.sendToServer(new RenderChangePayload(renderType.getPosition()));
+                ClientPacketDistributor.sendToServer(new RenderChangePayload(renderType.getPosition()));
             }
 
             return false;
@@ -317,8 +315,8 @@ public class ModeRadialMenu extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mx, int my, float partialTicks) {
-        PoseStack matrices = guiGraphics.pose();
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mx, int my, float partialTicks) {
+        Matrix3x2fStack matrices = guiGraphics.pose();
         float speedOfButtonGrowth = 7f; //How fast the buttons move during initial window opening
         float fract = Math.min(speedOfButtonGrowth, this.timeIn + partialTicks) / speedOfButtonGrowth;
         int x = this.width / 2;
@@ -340,11 +338,11 @@ public class ModeRadialMenu extends Screen {
 
 
         // This triggers the animation on creation - only affects side buttons and slider(s)
-        matrices.pushPose();
-        matrices.translate((1 - fract) * x, (1 - fract) * y, 0);
-        matrices.scale(fract, fract, fract);
-        super.render(guiGraphics, mx, my, partialTicks);
-        matrices.popPose();
+        matrices.pushMatrix();
+        matrices.translate((1 - fract) * x, (1 - fract) * y);
+        matrices.scale(fract, fract);
+        super.extractRenderState(guiGraphics, mx, my, partialTicks);
+        matrices.popMatrix();
 
         if (this.segments == 0) {
             return;
@@ -413,7 +411,7 @@ public class ModeRadialMenu extends Screen {
 
         // This is the naming logic for the text that pops up
         for (int i = 0; i < nameData.size(); i++) {
-            matrices.pushPose();
+            matrices.pushMatrix();
             NameDisplayData data = nameData.get(i);
             int xp = data.getX();
             int yp = data.getY();
@@ -433,27 +431,23 @@ public class ModeRadialMenu extends Screen {
 
             Color color = i == modeIndex ? Color.GREEN : Color.WHITE;
             if (data.isSelected())
-                guiGraphics.drawString(font, name, xsp + (data.isCentralized() ? width / 2f - 4 : 0), ysp, color.getRGB(), true);
+                guiGraphics.text(font, name, xsp + (data.isCentralized() ? width / 2 - 4 : 0), ysp, color.getRGB(), true);
 
             double mod = 0.7;
             int xdp = (int) ((xp - x) * mod + x);
             int ydp = (int) ((yp - y) * mod + y);
 
-            RenderSystem.setShader(GameRenderer::getPositionTexShader);
-            RenderSystem.setShaderColor(color.getRed() / 255F, color.getGreen() / 255F, color.getBlue() / 255F, 1);
-            RenderSystem.setShaderTexture(0, mode.icon());
-            guiGraphics.blit(arrayOfModes.get(i).icon(), xdp - 8, ydp - 8, 0, 0, 16, 16, 16, 16);
+            int tint = ARGB.color(color.getRed(), color.getGreen(), color.getBlue());
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, arrayOfModes.get(i).icon(), xdp - 8, ydp - 8, 0, 0, 16, 16, 16, 16, tint);
 
-            matrices.popPose();
+            matrices.popMatrix();
         }
-        Color color = Color.WHITE;
-        RenderSystem.setShaderColor(color.getRed() / 255F, color.getGreen() / 255F, color.getBlue() / 255F, 1);
         float s = 1.8F * fract;
-        matrices.pushPose();
-        matrices.scale(s, s, s);
-        matrices.translate(x / s - (tool.getItem() instanceof GadgetCopyPaste ? 8 : 8.5), y / s - 8, 440);
-        guiGraphics.renderItem(tool, 0, 0);
-        matrices.popPose();
+        matrices.pushMatrix();
+        matrices.scale(s, s);
+        matrices.translate(x / s - (tool.getItem() instanceof GadgetCopyPaste ? 8 : 8.5f), y / s - 8);
+        guiGraphics.item(tool, 0, 0);
+        matrices.popMatrix();
     }
 
     private boolean isCursorInSlice(float angle, float totalDeg, float degPer, boolean inRange) {
@@ -463,7 +457,7 @@ public class ModeRadialMenu extends Screen {
     private void changeMode() {
         if (this.slotSelected >= 0) {
             assert getMinecraft().player != null;
-            PacketDistributor.sendToServer(new ModeSwitchPayload(false, arrayOfModes.get(this.slotSelected).getId()));
+            ClientPacketDistributor.sendToServer(new ModeSwitchPayload(false, arrayOfModes.get(this.slotSelected).getId()));
 
             mode = arrayOfModes.get(this.slotSelected);
             OurSounds.playSound(Registration.BEEP.get());
@@ -471,14 +465,14 @@ public class ModeRadialMenu extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int mouseButton) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         this.changeMode();
-        return super.mouseClicked(mouseX, mouseY, mouseButton);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
     public void tick() {
-        if (!InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), KeyBindings.menuSettings.getKey().getValue())) {
+        if (!InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), KeyBindings.menuSettings.getKey().getValue())) {
             onClose();
             changeMode();
         }
@@ -518,7 +512,7 @@ public class ModeRadialMenu extends Screen {
 
     private void sendRangeUpdate(int valueNew) {
         if (valueNew != GadgetNBT.getToolRange(this.getGadget())) {
-            PacketDistributor.sendToServer(new RangeChangePayload(valueNew));
+            ClientPacketDistributor.sendToServer(new RangeChangePayload(valueNew));
         }
     }
 

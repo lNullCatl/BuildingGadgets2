@@ -76,7 +76,7 @@ public class Template {
         } catch (Exception e) {
             this.name = "";
             this.statePosArrayList = "";
-            Minecraft.getInstance().player.displayClientMessage(Component.translatable("buildinggadgets2.screen.invalidjson"), true);
+            Minecraft.getInstance().player.sendOverlayMessage(Component.translatable("buildinggadgets2.screen.invalidjson"));
         }
 
     }

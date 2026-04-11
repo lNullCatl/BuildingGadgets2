@@ -91,7 +91,7 @@ public class GadgetExchanger extends BaseGadget {
     InteractionResult onShiftAction(ItemActionContext context) {
         BlockState blockState = context.level().getBlockState(context.pos());
         if (!GadgetUtils.isValidBlockState(blockState, context.level(), context.pos()) || blockState.getBlock() instanceof RenderBlock) {
-            context.player().displayClientMessage(Component.translatable("buildinggadgets2.messages.invalidblock"), true);
+            context.player().sendOverlayMessage(Component.translatable("buildinggadgets2.messages.invalidblock"));
             return super.onShiftAction(context);
         }
         if (GadgetUtils.setBlockState(context.stack(), blockState))
@@ -118,7 +118,7 @@ public class GadgetExchanger extends BaseGadget {
             if (pos.state.isAir()) continue; //Since we store air now
             if (!pos.state.canSurvive(level, pos.pos)) continue;
             if (!player.isCreative() && !hasEnoughEnergy(gadget)) {
-                player.displayClientMessage(Component.translatable("buildinggadgets2.messages.outofpower"), true);
+                player.sendOverlayMessage(Component.translatable("buildinggadgets2.messages.outofpower"));
                 break; //Break out if we're out of power
             }
             if (!player.isCreative())

@@ -7,13 +7,14 @@ import com.direwolf20.buildinggadgets2.common.network.data.*;
 import com.direwolf20.buildinggadgets2.util.GadgetNBT;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 import javax.annotation.Nonnull;
 import java.util.HashSet;
@@ -81,7 +82,7 @@ public class DestructionGUI extends Screen {
 
         Button undo_button = new GuiIconActionable(x - 55, y - 75, "undo", Component.translatable("buildinggadgets2.radialmenu.undo"), false, send -> {
             if (send) {
-                PacketDistributor.sendToServer(new UndoPayload());
+                ClientPacketDistributor.sendToServer(new UndoPayload());
             }
 
             return false;
@@ -90,7 +91,7 @@ public class DestructionGUI extends Screen {
 
         Button anchorButton = new GuiIconActionable(x - 25, y - 75, "anchor", Component.translatable("buildinggadgets2.radialmenu.anchor"), true, send -> {
             if (send) {
-                PacketDistributor.sendToServer(new AnchorPayload());
+                ClientPacketDistributor.sendToServer(new AnchorPayload());
             }
 
             return !GadgetNBT.getAnchorPos(destructionGadget).equals(GadgetNBT.nullPos);
@@ -99,7 +100,7 @@ public class DestructionGUI extends Screen {
 
         Button affectTiles = new GuiIconActionable(x + 5, y - 75, "affecttiles", Component.translatable("buildinggadgets2.screen.affecttiles"), true, send -> {
             if (send) {
-                PacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.AFFECT_TILES.getName()));
+                ClientPacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.AFFECT_TILES.getName()));
             }
 
             return GadgetNBT.getSetting(destructionGadget, GadgetNBT.ToggleableSettings.AFFECT_TILES.getName());
@@ -108,7 +109,7 @@ public class DestructionGUI extends Screen {
 
         Button rayTrace = new GuiIconActionable(x + 35, y - 75, "raytrace_fluid", Component.translatable("buildinggadgets2.radialmenu.raytracefluids"), true, send -> {
             if (send) {
-                PacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.RAYTRACE_FLUID.getName()));
+                ClientPacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.RAYTRACE_FLUID.getName()));
             }
 
             return GadgetNBT.getSetting(destructionGadget, GadgetNBT.ToggleableSettings.RAYTRACE_FLUID.getName());
@@ -119,7 +120,7 @@ public class DestructionGUI extends Screen {
             if (send) {
                 renderType = renderType.next();
                 renderTypeButton.setMessage(Component.translatable(renderType.getLang()));
-                PacketDistributor.sendToServer(new RenderChangePayload(renderType.getPosition()));
+                ClientPacketDistributor.sendToServer(new RenderChangePayload(renderType.getPosition()));
             }
 
             return false;
@@ -183,28 +184,23 @@ public class DestructionGUI extends Screen {
 
     private void sendPacket() {
         if (isWithinBounds()) {
-            PacketDistributor.sendToServer(new DestructionRangesPayload(left.getValueInt(), right.getValueInt(), up.getValueInt(), down.getValueInt(), depth.getValueInt()));
+            ClientPacketDistributor.sendToServer(new DestructionRangesPayload(left.getValueInt(), right.getValueInt(), up.getValueInt(), down.getValueInt(), depth.getValueInt()));
         }
     }
 
     @Override
-    public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        super.render(guiGraphics, mouseX, mouseY, partialTicks);
+    public void extractRenderState(@Nonnull GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
 
-        guiGraphics.drawCenteredString(font, this.sizeString, width / 2, (height / 2) + 40, this.isValidSize ? 0x00FF00 : 0xFF2000);
+        guiGraphics.centeredText(font, this.sizeString, width / 2, (height / 2) + 40, this.isValidSize ? 0xFF00FF00 : 0xFFFF2000);
         if (!this.isValidSize) {
-            guiGraphics.drawCenteredString(font, Component.translatable("buildinggadgets2.screen.destructiontoolarge"), width / 2, (height / 2) + 50, 0xFF2000);
+            guiGraphics.centeredText(font, Component.translatable("buildinggadgets2.screen.destructiontoolarge"), width / 2, (height / 2) + 50, 0xFFFF2000);
         }
-    }
-
-    @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int mouseButton) {
-        return super.mouseReleased(mouseX, mouseY, mouseButton);
     }
 
     @Override
     public void tick() {
-        if (keyDown && !InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), KeyBindings.menuSettings.getKey().getValue())) {
+        if (keyDown && !InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), KeyBindings.menuSettings.getKey().getValue())) {
             onClose();
         }
         super.tick();
@@ -216,16 +212,20 @@ public class DestructionGUI extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int p_keyPressed_1_, int p_keyPressed_2_, int p_keyPressed_3_) {
+    public boolean keyPressed(KeyEvent event) {
         if (keyDown)
-            return super.keyPressed(p_keyPressed_1_, p_keyPressed_2_, p_keyPressed_3_);
-        InputConstants.Key mouseKey = InputConstants.getKey(p_keyPressed_1_, p_keyPressed_2_);
-        if (p_keyPressed_1_ == 256 || minecraft.options.keyInventory.isActiveAndMatches(mouseKey)) {
+            return super.keyPressed(event);
+        int keyCode = event.key();
+        int scanCode = event.scancode();
+        InputConstants.Key mouseKey = keyCode == -1
+                ? InputConstants.Type.SCANCODE.getOrCreate(scanCode)
+                : InputConstants.Type.KEYSYM.getOrCreate(keyCode);
+        if (keyCode == 256 || minecraft.options.keyInventory.isActiveAndMatches(mouseKey)) {
             onClose();
             return true;
         }
 
-        return super.keyPressed(p_keyPressed_1_, p_keyPressed_2_, p_keyPressed_3_);
+        return super.keyPressed(event);
     }
 
 }
