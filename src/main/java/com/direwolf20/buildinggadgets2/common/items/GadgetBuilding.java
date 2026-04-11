@@ -26,8 +26,8 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 public class GadgetBuilding extends BaseGadget {
-    public GadgetBuilding() {
-        super();
+    public GadgetBuilding(Properties properties) {
+        super(properties);
     }
 
     @Override

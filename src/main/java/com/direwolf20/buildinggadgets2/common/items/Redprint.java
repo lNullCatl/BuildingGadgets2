@@ -13,9 +13,8 @@ import java.util.function.Consumer;
 
 public class Redprint extends Item {
 
-    public Redprint() {
-        super(new Properties()
-                .stacksTo(1));
+    public Redprint(Properties properties) {
+        super(properties);
     }
 
     @Override

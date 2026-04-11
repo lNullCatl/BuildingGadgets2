@@ -18,9 +18,8 @@ import java.util.function.Consumer;
 
 public class TemplateItem extends Item {
 
-    public TemplateItem() {
-        super(new Properties()
-                .stacksTo(1));
+    public TemplateItem(Properties properties) {
+        super(properties);
     }
 
     @Override

@@ -28,8 +28,8 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 public class GadgetCopyPaste extends BaseGadget {
-    public GadgetCopyPaste() {
-        super();
+    public GadgetCopyPaste(Properties properties) {
+        super(properties);
     }
 
     @Override

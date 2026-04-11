@@ -36,11 +36,7 @@ import java.util.function.Consumer;
 
 public abstract class BaseGadget extends Item {
 
-    public BaseGadget() {
-        this(new Properties().stacksTo(1));
-    }
-
-    protected BaseGadget(Properties properties) {
+    public BaseGadget(Properties properties) {
         super(properties);
     }
 

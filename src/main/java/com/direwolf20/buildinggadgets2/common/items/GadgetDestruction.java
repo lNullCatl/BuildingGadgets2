@@ -34,8 +34,8 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public class GadgetDestruction extends BaseGadget {
-    public GadgetDestruction() {
-        super();
+    public GadgetDestruction(Properties properties) {
+        super(properties);
     }
 
     @Override

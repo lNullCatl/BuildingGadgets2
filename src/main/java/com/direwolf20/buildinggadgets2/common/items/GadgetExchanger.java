@@ -36,8 +36,8 @@ import static com.direwolf20.buildinggadgets2.util.BuildingUtils.hasEnoughEnergy
 import static com.direwolf20.buildinggadgets2.util.BuildingUtils.useEnergy;
 
 public class GadgetExchanger extends BaseGadget {
-    public GadgetExchanger() {
-        super(new Properties().stacksTo(1).enchantable(3));
+    public GadgetExchanger(Properties properties) {
+        super(properties);
     }
 
     @Override

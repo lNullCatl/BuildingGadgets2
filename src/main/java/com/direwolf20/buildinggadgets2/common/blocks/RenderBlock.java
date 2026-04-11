@@ -15,11 +15,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import javax.annotation.Nullable;
 
 public class RenderBlock extends Block implements EntityBlock {
-    public RenderBlock() {
-        super(Block.Properties.of()
-                .strength(20f)
-                .dynamicShape()
-                .noOcclusion());
+    public RenderBlock(Properties properties) {
+        super(properties);
     }
 
     @Nullable

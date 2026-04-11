@@ -26,8 +26,8 @@ import javax.annotation.Nullable;
 public class TemplateManager extends Block implements EntityBlock {
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
-    public TemplateManager() {
-        super(Properties.of().strength(2f));
+    public TemplateManager(Properties properties) {
+        super(properties);
         registerDefaultState(getStateDefinition().any().setValue(FACING, Direction.SOUTH));
     }
 
