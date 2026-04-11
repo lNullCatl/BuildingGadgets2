@@ -38,7 +38,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.joml.Matrix3x2fStack;
-import org.joml.Matrix4f;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -401,9 +400,8 @@ public class ModeRadialMenu extends Screen {
                 if ((int) i == (int) (degPer / 2))
                     nameData.add(new NameDisplayData((int) xp, (int) yp, mouseInSector, shouldCenter && (seg == indexBottom || seg == indexTop)));
 
-                Matrix4f pose = matrices.last().pose();
-                buffer.addVertex(pose, (float) (x + Math.cos(rad) * radius / 2.3F), (float) (y + Math.sin(rad) * radius / 2.3F), 0).setColor(r, g, b, a);
-                buffer.addVertex(xp, yp, 0).setColor(r, g, b, a);
+                buffer.addVertexWith2DPose(matrices, (float) (x + Math.cos(rad) * radius / 2.3F), (float) (y + Math.sin(rad) * radius / 2.3F)).setColor(r, g, b, a);
+                buffer.addVertexWith2DPose(matrices, xp, yp).setColor(r, g, b, a);
             }
 
             bufferSource.endBatch(OurRenderTypes.TRIANGLE_STRIP);
