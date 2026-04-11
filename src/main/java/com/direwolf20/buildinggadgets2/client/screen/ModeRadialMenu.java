@@ -9,8 +9,7 @@ import com.direwolf20.buildinggadgets2.BuildingGadgets2;
 import com.direwolf20.buildinggadgets2.api.gadgets.GadgetModes;
 import com.direwolf20.buildinggadgets2.client.KeyBindings;
 import com.direwolf20.buildinggadgets2.client.OurSounds;
-// TODO(rendering-port): re-import OurRenderTypes once rewritten for 26.1.
-//import com.direwolf20.buildinggadgets2.client.renderer.OurRenderTypes;
+import com.direwolf20.buildinggadgets2.client.renderer.OurRenderTypes;
 import com.direwolf20.buildinggadgets2.client.screen.widgets.GuiIconActionable;
 import com.direwolf20.buildinggadgets2.client.screen.widgets.IncrementalSliderWidget;
 import com.direwolf20.buildinggadgets2.common.items.*;
@@ -22,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -29,6 +29,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -37,6 +38,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.joml.Matrix3x2fStack;
+import org.joml.Matrix4f;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -389,9 +391,8 @@ public class ModeRadialMenu extends Screen {
                 r = g = b = 1F;
             }
 
-            // TODO(rendering-port): re-enable pie-wedge rendering once OurRenderTypes is rewritten for 26.1.
-            //MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-            //VertexConsumer buffer = bufferSource.getBuffer(OurRenderTypes.TRIANGLE_STRIP);
+            MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+            VertexConsumer buffer = bufferSource.getBuffer(OurRenderTypes.TRIANGLE_STRIP);
 
             for (float i = degPer; i >= 0; i--) {
                 float rad = (float) ((i + totalDeg) / 180F * Math.PI);
@@ -400,12 +401,12 @@ public class ModeRadialMenu extends Screen {
                 if ((int) i == (int) (degPer / 2))
                     nameData.add(new NameDisplayData((int) xp, (int) yp, mouseInSector, shouldCenter && (seg == indexBottom || seg == indexTop)));
 
-                //Matrix4f pose = matrices.last().pose();
-                //buffer.addVertex(pose, (float) (x + Math.cos(rad) * radius / 2.3F), (float) (y + Math.sin(rad) * radius / 2.3F), 0).setColor(r, g, b, a);
-                //buffer.addVertex(xp, yp, 0).setColor(r, g, b, a);
+                Matrix4f pose = matrices.last().pose();
+                buffer.addVertex(pose, (float) (x + Math.cos(rad) * radius / 2.3F), (float) (y + Math.sin(rad) * radius / 2.3F), 0).setColor(r, g, b, a);
+                buffer.addVertex(xp, yp, 0).setColor(r, g, b, a);
             }
 
-            //bufferSource.endBatch(OurRenderTypes.TRIANGLE_STRIP);
+            bufferSource.endBatch(OurRenderTypes.TRIANGLE_STRIP);
             totalDeg += degPer;
         }
 

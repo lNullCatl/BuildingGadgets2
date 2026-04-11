@@ -1,9 +1,9 @@
 package com.direwolf20.buildinggadgets2.client.renderer;
-/*
+
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 
 public class OurRenderTypes extends RenderType {
     public static final RenderType RenderBlock = create("GadgetRenderBlock",
@@ -100,4 +100,3 @@ public class OurRenderTypes extends RenderType {
         super(p_173178_, p_173179_, p_173180_, p_173181_, p_173182_, p_173183_, p_173184_, p_173185_);
     }
 }
-*/

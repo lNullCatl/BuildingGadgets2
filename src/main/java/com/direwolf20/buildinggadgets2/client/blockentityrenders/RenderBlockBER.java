@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.client.blockentityrenders;
-/*
+
 import com.direwolf20.buildinggadgets2.client.renderer.*;
 import com.direwolf20.buildinggadgets2.common.blockentities.RenderBlockBE;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -7,14 +7,13 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.color.block.BlockColors;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
@@ -22,7 +21,6 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.data.ModelData;
 
 import java.util.BitSet;
 import java.util.List;
@@ -57,11 +55,11 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
         BakedModel ibakedmodel = blockrendererdispatcher.getBlockModel(renderState);
         boolean isNormalRender = false;
         for (Direction direction : Direction.values()) {
-            if (!ibakedmodel.getQuads(renderState, direction, RandomSource.create(), ModelData.EMPTY, null).isEmpty()) {
+            if (!ibakedmodel.getQuads(renderState, direction, RandomSource.create(), null).isEmpty()) {
                 isNormalRender = true;
                 break;
             }
-            if (!ibakedmodel.getQuads(renderState, null, RandomSource.create(), ModelData.EMPTY, null).isEmpty()) {
+            if (!ibakedmodel.getQuads(renderState, null, RandomSource.create(), null).isEmpty()) {
                 isNormalRender = true;
             }
         }
@@ -93,7 +91,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
             if (isNormalRender)
                 modelBlockRenderer.tesselateBlock(level, ibakedmodel, renderState, pos, matrixStackIn, builder, false, RandomSource.create(), renderState.getSeed(pos), combinedOverlayIn, ModelData.EMPTY, null);
             else
-                blockrendererdispatcher.renderSingleBlock(renderState, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, ModelData.EMPTY, null);
+                blockrendererdispatcher.renderSingleBlock(renderState, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, null);
         } else {
             RenderFluidBlock.renderFluidBlock(renderState, level, pos, matrixStackIn, builder, true);
         }
@@ -123,7 +121,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
             if (isNormalRender) {
                 ModelBlockRenderer.AmbientOcclusionFace modelblockrenderer$ambientocclusionface = new ModelBlockRenderer.AmbientOcclusionFace();
                 for (Direction direction : Direction.values()) {
-                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, ModelData.EMPTY, null);
+                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, null);
                     if (!list.isEmpty()) {
                         TextureAtlasSprite sprite = list.get(0).getSprite();
                         chunksConsumer.setSprite(sprite);
@@ -132,7 +130,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
                         modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, chunksConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
                     }
                 }
-                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, ModelData.EMPTY, null);
+                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, null);
                 if (!list.isEmpty()) {
                     TextureAtlasSprite sprite = list.get(0).getSprite();
                     chunksConsumer.setSprite(sprite);
@@ -161,7 +159,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
                 ModelBlockRenderer.AmbientOcclusionFace modelblockrenderer$ambientocclusionface = new ModelBlockRenderer.AmbientOcclusionFace();
                 for (Direction direction : Direction.values()) {
                     randomSource.setSeed(renderState.getSeed(pos));
-                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, ModelData.EMPTY, null);
+                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, null);
                     if (!list.isEmpty()) {
                         blockpos$mutableblockpos.setWithOffset(pos, direction);
                         BlockEntity blockEntity = level.getBlockEntity(pos.relative(direction));
@@ -176,7 +174,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
                     }
                 }
                 randomSource.setSeed(renderState.getSeed(pos));
-                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, ModelData.EMPTY, null);
+                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, null);
                 if (!list.isEmpty()) {
                     modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, direVertexConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
                 }
@@ -212,7 +210,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
             if (isNormalRender) {
                 ModelBlockRenderer.AmbientOcclusionFace modelblockrenderer$ambientocclusionface = new ModelBlockRenderer.AmbientOcclusionFace();
                 for (Direction direction : Direction.values()) {
-                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, ModelData.EMPTY, null);
+                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, null);
                     if (!list.isEmpty()) {
                         TextureAtlasSprite sprite = list.get(0).getSprite();
                         chunksConsumer.setSprite(sprite);
@@ -221,7 +219,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
                         modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, chunksConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
                     }
                 }
-                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, ModelData.EMPTY, null);
+                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, null);
                 if (!list.isEmpty()) {
                     TextureAtlasSprite sprite = list.get(0).getSprite();
                     chunksConsumer.setSprite(sprite);
@@ -254,7 +252,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
                 ModelBlockRenderer.AmbientOcclusionFace modelblockrenderer$ambientocclusionface = new ModelBlockRenderer.AmbientOcclusionFace();
                 for (Direction direction : Direction.values()) {
                     randomSource.setSeed(renderState.getSeed(pos));
-                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, ModelData.EMPTY, null);
+                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, null);
                     if (!list.isEmpty()) {
                         blockpos$mutableblockpos.setWithOffset(pos, direction);
                         BlockEntity blockEntity = level.getBlockEntity(pos.relative(direction));
@@ -269,7 +267,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
                     }
                 }
                 randomSource.setSeed(renderState.getSeed(pos));
-                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, ModelData.EMPTY, null);
+                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, null);
                 if (!list.isEmpty()) {
                     modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, direVertexConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
                 }
@@ -279,4 +277,3 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
         }
     }
 }
-*/

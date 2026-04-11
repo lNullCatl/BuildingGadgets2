@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.client.renderer;
-/*
+
 import com.direwolf20.buildinggadgets2.common.items.*;
 import com.direwolf20.buildinggadgets2.common.worlddata.BG2DataClient;
 import com.direwolf20.buildinggadgets2.setup.Registration;
@@ -10,12 +10,11 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -29,7 +28,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -192,7 +190,7 @@ public class VBORenderer {
                 matrix.scale(1.001f, 1.001f, 1.001f); //For Exchanger
             }
 
-            for (RenderType renderType : ibakedmodel.getRenderTypes(renderState, random, ModelData.EMPTY)) {
+            for (RenderType renderType : ibakedmodel.getRenderTypes(renderState, random)) {
                 //Flowers render weirdly so we use a custom renderer to make them look better. Glass and Flowers are both cutouts, so we only want this for non-cube blocks
                 if (renderType.equals(RenderType.cutout()) && renderState.getShape(level, pos.pos.offset(renderPos)).equals(Shapes.block()))
                     renderType = RenderType.translucent();
@@ -201,7 +199,7 @@ public class VBORenderer {
                 //Use tesselateBlock to skip the block.isModel check - this helps render Create blocks that are both models AND animated
                 if (renderState.getFluidState().isEmpty()) {
                     try {
-                        modelBlockRenderer.tesselateBlock(fakeRenderingWorld, ibakedmodel, renderState, pos.pos.offset(renderPos).above(255), matrix, direVertexConsumer, false, random, renderState.getSeed(pos.pos.offset(renderPos)), OverlayTexture.NO_OVERLAY, ibakedmodel.getModelData(fakeRenderingWorld, pos.pos, renderState, ModelData.EMPTY), renderType);
+                        modelBlockRenderer.tesselateBlock(fakeRenderingWorld, ibakedmodel, renderState, pos.pos.offset(renderPos).above(255), matrix, direVertexConsumer, false, random, renderState.getSeed(pos.pos.offset(renderPos)), OverlayTexture.NO_OVERLAY, ibakedmodel.getModelData(fakeRenderingWorld, pos.pos, renderState), renderType);
                     } catch (Exception e) {
                         //System.out.println(e);
                     }
@@ -255,10 +253,10 @@ public class VBORenderer {
         BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
         BakedModel ibakedmodel = dispatcher.getBlockModel(state);
         for (Direction direction : Direction.values()) {
-            if (!ibakedmodel.getQuads(state, direction, RandomSource.create(), ModelData.EMPTY, null).isEmpty()) {
+            if (!ibakedmodel.getQuads(state, direction, RandomSource.create(), null).isEmpty()) {
                 return true;
             }
-            if (!ibakedmodel.getQuads(state, null, RandomSource.create(), ModelData.EMPTY, null).isEmpty()) {
+            if (!ibakedmodel.getQuads(state, null, RandomSource.create(), null).isEmpty()) {
                 return true;
             }
         }
@@ -425,4 +423,3 @@ public class VBORenderer {
         return sortStates.get(renderType).buildSortedIndexBuffer(getByteBuffer(renderType), VertexSorting.byDistance(v -> -sortPos.distanceSquared(v)));
     }
 }
-*/

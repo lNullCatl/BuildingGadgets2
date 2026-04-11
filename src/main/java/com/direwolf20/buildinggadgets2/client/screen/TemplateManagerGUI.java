@@ -4,7 +4,7 @@
  */
 
 package com.direwolf20.buildinggadgets2.client.screen;
-/*
+
 import com.direwolf20.buildinggadgets2.BuildingGadgets2;
 import com.direwolf20.buildinggadgets2.client.renderer.MyRenderMethods;
 import com.direwolf20.buildinggadgets2.client.renderer.OurRenderTypes;
@@ -35,14 +35,14 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.Rect2i;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
@@ -63,7 +63,7 @@ import java.util.stream.Collectors;
 import static com.direwolf20.buildinggadgets2.client.renderer.VBORenderer.isModelRender;
 
 public class TemplateManagerGUI extends AbstractContainerScreen<TemplateManagerContainer> {
-    private static final ResourceLocation background = ResourceLocation.fromNamespaceAndPath(BuildingGadgets2.MODID, "textures/gui/template_manager.png");
+    private static final Identifier background = Identifier.fromNamespaceAndPath(BuildingGadgets2.MODID, "textures/gui/template_manager.png");
 
     private final Rect2i panel = new Rect2i((8 - 20), 12, 136, 80);
     private boolean panelClicked;
@@ -547,4 +547,3 @@ public class TemplateManagerGUI extends AbstractContainerScreen<TemplateManagerC
 
     }
 }
-*/
