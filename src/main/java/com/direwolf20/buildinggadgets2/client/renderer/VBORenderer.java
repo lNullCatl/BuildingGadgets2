@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.client.renderer;
-
+/*
 import com.direwolf20.buildinggadgets2.common.items.*;
 import com.direwolf20.buildinggadgets2.common.worlddata.BG2DataClient;
 import com.direwolf20.buildinggadgets2.setup.Registration;
@@ -154,9 +154,9 @@ public class VBORenderer {
         return true;
     }
 
-    /**
-     * This method creates a Map<RenderType, VertexBuffer> when given an ArrayList<StatePos> statePosCache - its used both here to draw in-game AND in the TemplateManagerGUI.java class
-     */
+
+    //  This method creates a Map<RenderType, VertexBuffer> when given an ArrayList<StatePos> statePosCache - its used both here to draw in-game AND in the TemplateManagerGUI.java class
+
     public static void generateRender(Level level, BlockPos renderPos, ItemStack gadget, float transparency, ArrayList<StatePos> statePosCache, Map<RenderType, VertexBuffer> vertexBuffers) {
         boolean isExchanging = gadget.getItem() instanceof BaseGadget && GadgetNBT.getMode(gadget).isExchanging;
         if (statePosCache == null || statePosCache.isEmpty()) return;
@@ -378,19 +378,6 @@ public class VBORenderer {
             }
         }
 
-        //Fluid Rendering
-        /*for (StatePos pos : statePosCache.stream().filter(pos -> (!pos.state.getFluidState().isEmpty())).toList()) {
-            matrix.pushPose();
-            matrix.translate(-projectedView.x(), -projectedView.y(), -projectedView.z());
-            matrix.translate(renderPos.getX(), renderPos.getY(), renderPos.getZ());
-            FluidState fluidstate = pos.state.getFluidState();
-            RenderType rendertype = ItemBlockRenderTypes.getRenderLayer(fluidstate);
-            DireVertexConsumer direVertexConsumer = new DireVertexConsumer(buffersource.getBuffer(rendertype), 0.5f);
-            dispatcher.renderLiquid(pos.pos, player.level(), direVertexConsumer, pos.state, fluidstate);
-            buffersource.endBatch(rendertype);
-            matrix.popPose();
-        }*/
-
         //Red Overlay for missing Items
         boolean hasBound = GadgetNBT.getBoundPos(gadget) != null;
         BlockState renderBlockState = GadgetNBT.getGadgetBlockState(gadget);
@@ -438,3 +425,4 @@ public class VBORenderer {
         return sortStates.get(renderType).buildSortedIndexBuffer(getByteBuffer(renderType), VertexSorting.byDistance(v -> -sortPos.distanceSquared(v)));
     }
 }
+*/

@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.client.renderer;
-
+/*
 import com.direwolf20.buildinggadgets2.setup.Registration;
 import com.direwolf20.buildinggadgets2.util.BuildingUtils;
 import com.direwolf20.buildinggadgets2.util.GadgetNBT;
@@ -61,3 +61,4 @@ public class DestructionRenderer {
         buffer.endBatch(); // @mcp: draw = finish
     }
 }
+*/

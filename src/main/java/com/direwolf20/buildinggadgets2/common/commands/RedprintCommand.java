@@ -15,7 +15,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -96,7 +96,7 @@ public class RedprintCommand {
         UUID sourceUUID = bg2Data.getRedprintUUIDfromName(name);
         if (sourceUUID == null) {
             pSource.sendSuccess(() -> Component.translatable("buildinggadgets2.messages.redprintgivefail", name, serverPlayer.getDisplayName()), false);
-            playSound(serverPlayer, Holder.direct(SoundEvent.createVariableRangeEvent(ResourceLocation.parse(SoundEvents.WAXED_SIGN_INTERACT_FAIL.getLocation().toString()))));
+            playSound(serverPlayer, Holder.direct(SoundEvent.createVariableRangeEvent(Identifier.parse(SoundEvents.WAXED_SIGN_INTERACT_FAIL.getLocation().toString()))));
             return 0;
         }
 
@@ -118,7 +118,7 @@ public class RedprintCommand {
         serverPlayer.connection.send(new SendCopyDataPayload(targetUUID, GadgetNBT.getCopyUUID(newRedprint), tag));
 
         serverPlayer.addItem(newRedprint);
-        playSound(serverPlayer, Holder.direct(SoundEvent.createVariableRangeEvent(ResourceLocation.parse(SoundEvents.ENCHANTMENT_TABLE_USE.getLocation().toString()))));
+        playSound(serverPlayer, Holder.direct(SoundEvent.createVariableRangeEvent(Identifier.parse(SoundEvents.ENCHANTMENT_TABLE_USE.getLocation().toString()))));
 
         return 1;
     }

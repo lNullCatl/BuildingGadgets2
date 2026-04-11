@@ -16,7 +16,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -181,7 +181,7 @@ public abstract class BaseGadget extends Item {
      * @param stack the gadget
      * @return the selected mode's id
      */
-    public ResourceLocation rotateModes(ItemStack stack) {
+    public Identifier rotateModes(ItemStack stack) {
         ImmutableSortedSet<BaseMode> modesForGadget = GadgetModes.INSTANCE.getModesForGadget(this.gadgetTarget());
         var arrayOfModes = new ArrayList<>(modesForGadget); // This is required to work with index's
         var currentMode = GadgetNBT.getMode(stack);

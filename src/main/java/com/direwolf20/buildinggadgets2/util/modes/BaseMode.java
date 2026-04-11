@@ -9,7 +9,7 @@ import com.direwolf20.buildinggadgets2.util.VectorHelper;
 import com.direwolf20.buildinggadgets2.util.datatypes.StatePos;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -48,7 +48,7 @@ public abstract class BaseMode implements Comparable<BaseMode> {
 
     public abstract ArrayList<StatePos> collectWorld(Direction hitSide, Player player, BlockPos start, BlockState state);
 
-    public abstract ResourceLocation getId();
+    public abstract Identifier getId();
 
     /**
      * Used for translations
@@ -60,8 +60,8 @@ public abstract class BaseMode implements Comparable<BaseMode> {
     /**
      * Used when displaying the mode selection wheel
      */
-    public ResourceLocation icon() {
-        return ResourceLocation.fromNamespaceAndPath(BuildingGadgets2.MODID, "textures/gui/mode/" + getId().getPath() + ".png");
+    public Identifier icon() {
+        return Identifier.fromNamespaceAndPath(BuildingGadgets2.MODID, "textures/gui/mode/" + getId().getPath() + ".png");
     }
 
     public boolean isPosValid(Level level, Player player, BlockPos blockPos, BlockState blockState) {

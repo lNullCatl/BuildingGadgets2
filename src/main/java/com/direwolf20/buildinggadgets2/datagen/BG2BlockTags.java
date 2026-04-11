@@ -4,7 +4,7 @@ import com.direwolf20.buildinggadgets2.BuildingGadgets2;
 import com.direwolf20.buildinggadgets2.setup.Registration;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
@@ -22,7 +22,7 @@ public class BG2BlockTags extends BlockTagsProvider {
         super(output, lookupProvider, BuildingGadgets2.MODID, existingFileHelper);
     }
 
-    public static final TagKey<Block> BG2DENY = BlockTags.create(ResourceLocation.fromNamespaceAndPath(BuildingGadgets2.MODID, "deny"));
+    public static final TagKey<Block> BG2DENY = BlockTags.create(Identifier.fromNamespaceAndPath(BuildingGadgets2.MODID, "deny"));
 
     @Override
     protected void addTags(HolderLookup.Provider provider) {

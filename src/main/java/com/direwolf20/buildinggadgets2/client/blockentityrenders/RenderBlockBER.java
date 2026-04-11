@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.client.blockentityrenders;
-
+/*
 import com.direwolf20.buildinggadgets2.client.renderer.*;
 import com.direwolf20.buildinggadgets2.common.blockentities.RenderBlockBE;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -279,3 +279,4 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
         }
     }
 }
+*/

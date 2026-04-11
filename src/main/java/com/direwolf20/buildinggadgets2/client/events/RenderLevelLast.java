@@ -1,5 +1,5 @@
 package com.direwolf20.buildinggadgets2.client.events;
-
+/*
 import com.direwolf20.buildinggadgets2.client.renderer.DestructionRenderer;
 import com.direwolf20.buildinggadgets2.client.renderer.MyRenderMethods;
 import com.direwolf20.buildinggadgets2.client.renderer.OurRenderTypes;
@@ -75,3 +75,4 @@ public class RenderLevelLast {
         buffer.endBatch(OurRenderTypes.TRANSPARENT_BOX);
     }
 }
+*/

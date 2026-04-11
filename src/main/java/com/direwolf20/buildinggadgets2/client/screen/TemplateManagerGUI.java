@@ -4,7 +4,7 @@
  */
 
 package com.direwolf20.buildinggadgets2.client.screen;
-
+/*
 import com.direwolf20.buildinggadgets2.BuildingGadgets2;
 import com.direwolf20.buildinggadgets2.client.renderer.MyRenderMethods;
 import com.direwolf20.buildinggadgets2.client.renderer.OurRenderTypes;
@@ -547,3 +547,4 @@ public class TemplateManagerGUI extends AbstractContainerScreen<TemplateManagerC
 
     }
 }
+*/

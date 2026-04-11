@@ -9,7 +9,8 @@ import com.direwolf20.buildinggadgets2.BuildingGadgets2;
 import com.direwolf20.buildinggadgets2.api.gadgets.GadgetModes;
 import com.direwolf20.buildinggadgets2.client.KeyBindings;
 import com.direwolf20.buildinggadgets2.client.OurSounds;
-import com.direwolf20.buildinggadgets2.client.renderer.OurRenderTypes;
+// TODO(rendering-port): re-import OurRenderTypes once rewritten for 26.1.
+//import com.direwolf20.buildinggadgets2.client.renderer.OurRenderTypes;
 import com.direwolf20.buildinggadgets2.client.screen.widgets.GuiIconActionable;
 import com.direwolf20.buildinggadgets2.client.screen.widgets.IncrementalSliderWidget;
 import com.direwolf20.buildinggadgets2.common.items.*;
@@ -390,8 +391,9 @@ public class ModeRadialMenu extends Screen {
                 r = g = b = 1F;
             }
 
-            MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-            VertexConsumer buffer = bufferSource.getBuffer(OurRenderTypes.TRIANGLE_STRIP);
+            // TODO(rendering-port): re-enable pie-wedge rendering once OurRenderTypes is rewritten for 26.1.
+            //MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+            //VertexConsumer buffer = bufferSource.getBuffer(OurRenderTypes.TRIANGLE_STRIP);
 
             for (float i = degPer; i >= 0; i--) {
                 float rad = (float) ((i + totalDeg) / 180F * Math.PI);
@@ -400,12 +402,12 @@ public class ModeRadialMenu extends Screen {
                 if ((int) i == (int) (degPer / 2))
                     nameData.add(new NameDisplayData((int) xp, (int) yp, mouseInSector, shouldCenter && (seg == indexBottom || seg == indexTop)));
 
-                Matrix4f pose = matrices.last().pose();
-                buffer.addVertex(pose, (float) (x + Math.cos(rad) * radius / 2.3F), (float) (y + Math.sin(rad) * radius / 2.3F), 0).setColor(r, g, b, a);
-                buffer.addVertex(xp, yp, 0).setColor(r, g, b, a);
+                //Matrix4f pose = matrices.last().pose();
+                //buffer.addVertex(pose, (float) (x + Math.cos(rad) * radius / 2.3F), (float) (y + Math.sin(rad) * radius / 2.3F), 0).setColor(r, g, b, a);
+                //buffer.addVertex(xp, yp, 0).setColor(r, g, b, a);
             }
 
-            bufferSource.endBatch(OurRenderTypes.TRIANGLE_STRIP);
+            //bufferSource.endBatch(OurRenderTypes.TRIANGLE_STRIP);
             totalDeg += degPer;
         }
 

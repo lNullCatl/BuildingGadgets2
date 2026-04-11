@@ -11,7 +11,7 @@ import com.direwolf20.buildinggadgets2.util.datatypes.StatePos;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -28,8 +28,8 @@ public class Copy extends BaseMode {
     }
 
     @Override
-    public ResourceLocation getId() {
-        return ResourceLocation.fromNamespaceAndPath(BuildingGadgets2.MODID, "copy");
+    public Identifier getId() {
+        return Identifier.fromNamespaceAndPath(BuildingGadgets2.MODID, "copy");
     }
 
     @Override
