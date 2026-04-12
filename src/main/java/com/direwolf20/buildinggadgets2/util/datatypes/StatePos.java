@@ -11,8 +11,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -106,7 +105,6 @@ public class StatePos {
         return rotatedList;
     }
 
-    @OnlyIn(Dist.CLIENT)
     public static Map<ItemStackKey, Integer> getItemList(ArrayList<StatePos> list) {
         Map<ItemStackKey, Integer> itemList = new Object2IntOpenHashMap<>();
         if (list == null || list.isEmpty())

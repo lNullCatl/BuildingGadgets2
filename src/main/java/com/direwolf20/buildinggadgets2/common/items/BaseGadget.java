@@ -27,8 +27,7 @@ import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+
 import net.neoforged.neoforge.capabilities.Capabilities;
 
 import java.util.*;
@@ -83,7 +82,6 @@ public abstract class BaseGadget extends Item {
         return Mth.hsvToRgb(Math.max(0.0F, (float) energy.getAmountAsInt() / (float) energy.getCapacityAsInt()) / 3.0F, 1.0F, 1.0F);
     }
 
-    @OnlyIn(Dist.CLIENT)
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flagIn) {
         super.appendHoverText(stack, context, display, tooltip, flagIn);

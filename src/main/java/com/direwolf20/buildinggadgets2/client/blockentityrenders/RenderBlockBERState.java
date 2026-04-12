@@ -10,4 +10,5 @@ public class RenderBlockBERState extends BlockEntityRenderState {
     public float scale;
     public ClientLevel level;
     public boolean shrinking;
+    public int[] tintLayers = new int[]{-1};
 }

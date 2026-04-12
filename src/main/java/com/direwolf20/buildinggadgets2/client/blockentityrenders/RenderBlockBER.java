@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.QuadInstance;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.Sheets;
@@ -66,6 +67,21 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
         if (state.level != null) {
             state.lightCoords = LevelRenderer.getLightCoords(state.level, state.blockPos);
         }
+
+        // Resolve biome-aware block tints (grass, leaves, water, etc.). BlockColors.getTintSources
+        // returns one BlockTintSource per tint layer the block uses; evaluate each against the
+        // real level so the preview picks up biome-correct foliage/grass color.
+        if (state.renderBlock != null && state.level != null) {
+            java.util.List<BlockTintSource> sources = Minecraft.getInstance().getBlockColors().getTintSources(state.renderBlock);
+            if (!sources.isEmpty()) {
+                state.tintLayers = new int[sources.size()];
+                for (int i = 0; i < sources.size(); i++) {
+                    state.tintLayers[i] = sources.get(i).colorInWorld(state.renderBlock, state.level, state.blockPos);
+                }
+            } else {
+                state.tintLayers = new int[]{-1};
+            }
+        }
     }
 
     @Override
@@ -120,7 +136,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
                         poseStack,
                         Sheets.cutoutBlockSheet(),
                         parts,
-                        new int[]{-1},
+                        state.tintLayers,
                         state.lightCoords,
                         OverlayTexture.NO_OVERLAY,
                         0);
@@ -165,10 +181,9 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
 
         collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
             QuadInstance instance = new QuadInstance();
-            instance.setColor(instanceColor);
             instance.setLightCoords(state.lightCoords);
             for (BlockStateModelPart part : parts) {
-                writePartQuads(part, buffer, pose, instance);
+                writePartQuads(part, buffer, pose, instance, state.tintLayers, instanceColor);
             }
         });
     }
@@ -216,7 +231,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
             QuadInstance instance = new QuadInstance();
             instance.setLightCoords(state.lightCoords);
             for (BlockStateModelPart part : parts) {
-                writePartQuadsSquished(part, squished, pose, instance);
+                writePartQuadsSquished(part, squished, pose, instance, state.tintLayers, -1);
             }
         });
     }
@@ -262,36 +277,44 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
             squished.adjustUV = effectiveAdjustUV;
             squished.bottomUp = false;
             QuadInstance instance = new QuadInstance();
-            instance.setColor(instanceColor);
             instance.setLightCoords(state.lightCoords);
             for (BlockStateModelPart part : parts) {
-                writePartQuadsSquished(part, squished, pose, instance);
+                writePartQuadsSquished(part, squished, pose, instance, state.tintLayers, instanceColor);
             }
         });
     }
 
-    /**
-     * Walk every face of a BlockStateModelPart and write its quads to {@code buffer} via putBakedQuad,
-     * carrying {@code instance} (color/light/overlay) through to every quad.
-     *
-     * Biome tint is intentionally not resolved here. putBakedQuad multiplies the quad's own
-     * bakedColors() into each vertex, so plain blocks render correctly; tinted blocks (grass, leaves,
-     * water) fall back to the model's baked default color — not biome-correct, but consistent with
-     * BG2's other ghost-preview regressions. The alternative is re-tesselating via ModelBlockRenderer
-     * + a FakeWorldTintAdapter, which is several hundred lines of code for a cosmetic win.
-     */
     private static void writePartQuads(
             BlockStateModelPart part,
             VertexConsumer buffer,
             PoseStack.Pose pose,
-            QuadInstance instance) {
+            QuadInstance instance,
+            int[] tintLayers,
+            int baseColor) {
         for (Direction dir : Direction.values()) {
             for (BakedQuad quad : part.getQuads(dir)) {
+                applyTint(instance, quad, tintLayers, baseColor);
                 buffer.putBakedQuad(pose, quad, instance);
             }
         }
         for (BakedQuad quad : part.getQuads(null)) {
+            applyTint(instance, quad, tintLayers, baseColor);
             buffer.putBakedQuad(pose, quad, instance);
+        }
+    }
+
+    private static void applyTint(QuadInstance instance, BakedQuad quad, int[] tintLayers, int baseColor) {
+        int tintIndex = quad.materialInfo().tintIndex();
+        if (tintIndex != -1 && tintIndex < tintLayers.length) {
+            int tint = tintLayers[tintIndex];
+            // Multiply tint RGB with baseColor's RGB, keep baseColor's alpha.
+            int r = ((tint >> 16) & 0xFF) * ((baseColor >> 16) & 0xFF) / 255;
+            int g = ((tint >> 8) & 0xFF) * ((baseColor >> 8) & 0xFF) / 255;
+            int b = (tint & 0xFF) * (baseColor & 0xFF) / 255;
+            int a = (baseColor >> 24) & 0xFF;
+            instance.setColor(ARGB.color(a, r, g, b));
+        } else {
+            instance.setColor(baseColor);
         }
     }
 
@@ -306,15 +329,19 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
             BlockStateModelPart part,
             DireVertexConsumerSquished squished,
             PoseStack.Pose pose,
-            QuadInstance instance) {
+            QuadInstance instance,
+            int[] tintLayers,
+            int baseColor) {
         for (Direction dir : Direction.values()) {
             for (BakedQuad quad : part.getQuads(dir)) {
+                applyTint(instance, quad, tintLayers, baseColor);
                 squished.setSprite(quad.materialInfo().sprite());
                 squished.setDirection(dir);
                 squished.putBakedQuad(pose, quad, instance);
             }
         }
         for (BakedQuad quad : part.getQuads(null)) {
+            applyTint(instance, quad, tintLayers, baseColor);
             squished.setSprite(quad.materialInfo().sprite());
             squished.setDirection(null);
             squished.putBakedQuad(pose, quad, instance);
