@@ -142,7 +142,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
                         0);
             }
         } else {
-            collector.submitCustomGeometry(poseStack, OurRenderTypes.RenderBlockFadeNoCull, (pose, buffer) ->
+            collector.submitCustomGeometry(poseStack, OurRenderTypes.RenderBlockFade, (pose, buffer) ->
                     RenderFluidBlock.renderFluidBlock(renderBlock, state.level, state.blockPos, pose, buffer, true));
         }
 
@@ -170,10 +170,8 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
         RenderType renderType = isSolid ? OurRenderTypes.RenderBlockFade : OurRenderTypes.RenderBlockFadeNoCull;
 
         if (!renderBlock.getFluidState().isEmpty()) {
-            collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
-                VertexConsumer wrapped = new DireVertexConsumer(buffer, alpha);
-                RenderFluidBlock.renderFluidBlock(renderBlock, state.level, pos, pose, wrapped, false);
-            });
+            collector.submitCustomGeometry(poseStack, OurRenderTypes.RenderBlockFade, (pose, buffer) ->
+                    RenderFluidBlock.renderFluidBlock(renderBlock, state.level, pos, pose, buffer, false, alpha));
             return;
         }
 
@@ -211,7 +209,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
         boolean effectiveAdjustUV = adjustUV && isSolid;
 
         if (!renderBlock.getFluidState().isEmpty()) {
-            collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+            collector.submitCustomGeometry(poseStack, OurRenderTypes.RenderBlockFade, (pose, buffer) -> {
                 DireVertexConsumerSquished squished = new DireVertexConsumerSquished(
                         buffer, 0, 0, 0, 1, scale, 1, pose.pose());
                 squished.adjustUV = effectiveAdjustUV;
@@ -259,7 +257,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
         boolean effectiveAdjustUV = isSolid;
 
         if (!renderBlock.getFluidState().isEmpty()) {
-            collector.submitCustomGeometry(poseStack, OurRenderTypes.RenderBlockFadeNoCull, (pose, buffer) -> {
+            collector.submitCustomGeometry(poseStack, OurRenderTypes.RenderBlockFade, (pose, buffer) -> {
                 DireVertexConsumerSquished squished = new DireVertexConsumerSquished(
                         buffer, 0, 0, 0, 1, scale, 1, pose.pose());
                 squished.adjustUV = effectiveAdjustUV;

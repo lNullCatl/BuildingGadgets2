@@ -13,6 +13,7 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.util.ARGB;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -48,10 +49,14 @@ public class RenderFluidBlock {
     }
 
     public static void renderFluidBlock(BlockState renderState, Level level, BlockPos pos, PoseStack matrixStackIn, VertexConsumer builder, boolean renderAdjacent) {
-        renderFluidBlock(renderState, level, pos, matrixStackIn.last(), builder, renderAdjacent);
+        renderFluidBlock(renderState, level, pos, matrixStackIn.last(), builder, renderAdjacent, 1f);
     }
 
     public static void renderFluidBlock(BlockState renderState, Level level, BlockPos pos, PoseStack.Pose pose, VertexConsumer builder, boolean renderAdjacent) {
+        renderFluidBlock(renderState, level, pos, pose, builder, renderAdjacent, 1f);
+    }
+
+    public static void renderFluidBlock(BlockState renderState, Level level, BlockPos pos, PoseStack.Pose pose, VertexConsumer builder, boolean renderAdjacent, float alpha) {
         if (renderState.getFluidState().isEmpty()) return;
         FluidState fluidState = renderState.getFluidState();
         FluidModel model = Minecraft.getInstance().getModelManager().getFluidStateModelSet().get(fluidState);
@@ -76,7 +81,7 @@ public class RenderFluidBlock {
         float height = 0.875f; //14/16
 
         QuadInstance instance = new QuadInstance();
-        instance.setColor(color);
+        instance.setColor(alpha < 1f ? ARGB.color(alpha, color) : color);
         instance.setLightCoords(brightness);
 
         BakedQuad quad;
