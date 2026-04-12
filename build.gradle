@@ -15,13 +15,12 @@ repositories {
     // Third-party mod repositories — disabled while porting to 26.1.
     // Re-enable alongside the matching dependencies block below.
     //
-    //maven { //Patchouli && JEI
-    //    url 'https://maven.blamejared.com'
-    //    content {
-    //        includeGroup "vazkii.patchouli"
-    //        includeGroup "mezz.jei"
-    //    }
-    //}
+    maven { //JEI
+        url 'https://maven.blamejared.com'
+        content {
+            includeGroup "mezz.jei"
+        }
+    }
     //
     //maven { // mek
     //    url = 'https://modmaven.dev/'
@@ -151,11 +150,10 @@ dependencies {
     //implementation "top.theillusivec4.curios:curios-neoforge:${curios_version}"
     ////compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
     //
-    //// Example mod dependency with JEI
-    //// The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
-    //compileOnly "mezz.jei:jei-${jei_mc_version}-common-api:${jei_version}"
-    //compileOnly "mezz.jei:jei-${jei_mc_version}-neoforge-api:${jei_version}"
-    //runtimeOnly "mezz.jei:jei-${jei_mc_version}-neoforge:${jei_version}"
+    // JEI — API at compile time, full mod at runtime
+    compileOnly "mezz.jei:jei-${jei_mc_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${jei_mc_version}-neoforge-api:${jei_version}"
+    runtimeOnly "mezz.jei:jei-${jei_mc_version}-neoforge:${jei_version}"
     //
     ////Patchouli
     //compileOnly "vazkii.patchouli:Patchouli:${patchouli_version}:api"

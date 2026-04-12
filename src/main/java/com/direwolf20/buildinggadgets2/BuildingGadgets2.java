@@ -1,14 +1,16 @@
 package com.direwolf20.buildinggadgets2;
 
 import com.direwolf20.buildinggadgets2.common.blockentities.TemplateManagerBE;
-import com.direwolf20.buildinggadgets2.common.capabilities.EnergyStorageItemstack;
 import com.direwolf20.buildinggadgets2.common.commands.BuildingGadgets2Commands;
 import com.direwolf20.buildinggadgets2.common.items.BaseGadget;
 import com.direwolf20.buildinggadgets2.common.network.PacketHandler;
+import com.direwolf20.buildinggadgets2.setup.BG2DataComponents;
 import com.direwolf20.buildinggadgets2.setup.ClientSetup;
 import com.direwolf20.buildinggadgets2.setup.Config;
 import com.direwolf20.buildinggadgets2.setup.ModSetup;
 import com.direwolf20.buildinggadgets2.setup.Registration;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.energy.ItemAccessEnergyHandler;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -42,7 +44,10 @@ public class BuildingGadgets2 {
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerItem(Capabilities.Energy.ITEM,
-                (itemStack, context) -> new EnergyStorageItemstack(((BaseGadget) itemStack.getItem()).getEnergyMax(), itemStack),
+                (itemStack, itemAccess) -> new ItemAccessEnergyHandler(
+                        itemAccess != null ? itemAccess : ItemAccess.forStack(itemStack),
+                        BG2DataComponents.FORGE_ENERGY.get(),
+                        ((BaseGadget) itemStack.getItem()).getEnergyMax()),
                 Registration.Building_Gadget.get(),
                 Registration.Exchanging_Gadget.get(),
                 Registration.CopyPaste_Gadget.get(),
