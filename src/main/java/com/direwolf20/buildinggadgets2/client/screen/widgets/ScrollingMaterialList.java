@@ -262,7 +262,9 @@ public class ScrollingMaterialList extends EntryList<ScrollingMaterialList.Entry
     }
 
     private void sort() {
-        children().sort(sortingMode.getComparator());
+        // 26.1: AbstractSelectionList.children() returns Collections.unmodifiableList(...). The parent
+        // now exposes a protected sort(Comparator<E>) hook that mutates the backing list directly.
+        super.sort(sortingMode.getComparator());
     }
 
     public enum SortingModes {

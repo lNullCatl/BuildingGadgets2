@@ -578,7 +578,7 @@ public class VBORenderer {
      * Block lookups go to the fake world (so ghost neighbors influence the render); light/tint lookups
      * fall back to the real world (so the preview picks up real-world lighting).
      */
-    private static final class FakeWorldTintAdapter implements BlockAndTintGetter {
+    static final class FakeWorldTintAdapter implements BlockAndTintGetter {
         private final FakeRenderingWorld fake;
         // ClientLevel, not Level: getBlockTint and getBlockColor only live on the client-side
         // BlockAndTintGetter now, and ClientLevel is the only Level subclass that implements it.
