@@ -48,6 +48,10 @@ public class RenderFluidBlock {
     }
 
     public static void renderFluidBlock(BlockState renderState, Level level, BlockPos pos, PoseStack matrixStackIn, VertexConsumer builder, boolean renderAdjacent) {
+        renderFluidBlock(renderState, level, pos, matrixStackIn.last(), builder, renderAdjacent);
+    }
+
+    public static void renderFluidBlock(BlockState renderState, Level level, BlockPos pos, PoseStack.Pose pose, VertexConsumer builder, boolean renderAdjacent) {
         if (renderState.getFluidState().isEmpty()) return;
         FluidState fluidState = renderState.getFluidState();
         FluidModel model = Minecraft.getInstance().getModelManager().getFluidStateModelSet().get(fluidState);
@@ -76,39 +80,35 @@ public class RenderFluidBlock {
         instance.setLightCoords(brightness);
 
         BakedQuad quad;
-        matrixStackIn.pushPose();
         //DOWN
         if (renderAdjacent || !(level.getBlockState(pos.relative(Direction.DOWN)).getBlock() instanceof RenderBlock)) {
             quad = createQuad(ImmutableList.of(new Vec3(x, y, z2), new Vec3(x, y, z), new Vec3(x2, y, z), new Vec3(x2, y, z2)), material, Direction.DOWN, minU, maxU, minV, maxV);
-            builder.putBakedQuad(matrixStackIn.last(), quad, instance);
+            builder.putBakedQuad(pose, quad, instance);
         }
         //UP
         if (renderAdjacent || !(level.getBlockState(pos.relative(Direction.UP)).getBlock() instanceof RenderBlock)) {
             quad = createQuad(ImmutableList.of(new Vec3(x, height, z), new Vec3(x, height, z2), new Vec3(x2, height, z2), new Vec3(x2, height, z)), material, Direction.UP, minU, maxU, minV, maxV);
-            builder.putBakedQuad(matrixStackIn.last(), quad, instance);
+            builder.putBakedQuad(pose, quad, instance);
         }
         //NORTH
         if (renderAdjacent || !(level.getBlockState(pos.relative(Direction.NORTH)).getBlock() instanceof RenderBlock)) {
             quad = createQuad(ImmutableList.of(new Vec3(x2, height, z), new Vec3(x2, y, z), new Vec3(x, y, z), new Vec3(x, height, z)), material, Direction.NORTH, minU, maxU, minV, maxV);
-            builder.putBakedQuad(matrixStackIn.last(), quad, instance);
+            builder.putBakedQuad(pose, quad, instance);
         }
         //SOUTH
         if (renderAdjacent || !(level.getBlockState(pos.relative(Direction.SOUTH)).getBlock() instanceof RenderBlock)) {
             quad = createQuad(ImmutableList.of(new Vec3(x, height, z2), new Vec3(x, y, z2), new Vec3(x2, y, z2), new Vec3(x2, height, z2)), material, Direction.SOUTH, minU, maxU, minV, maxV);
-            builder.putBakedQuad(matrixStackIn.last(), quad, instance);
+            builder.putBakedQuad(pose, quad, instance);
         }
         //WEST
         if (renderAdjacent || !(level.getBlockState(pos.relative(Direction.WEST)).getBlock() instanceof RenderBlock)) {
             quad = createQuad(ImmutableList.of(new Vec3(x, height, z), new Vec3(x, y, z), new Vec3(x, y, z2), new Vec3(x, height, z2)), material, Direction.WEST, minU, maxU, minV, maxV);
-            builder.putBakedQuad(matrixStackIn.last(), quad, instance);
+            builder.putBakedQuad(pose, quad, instance);
         }
         //EAST
         if (renderAdjacent || !(level.getBlockState(pos.relative(Direction.EAST)).getBlock() instanceof RenderBlock)) {
             quad = createQuad(ImmutableList.of(new Vec3(x2, height, z2), new Vec3(x2, y, z2), new Vec3(x2, y, z), new Vec3(x2, height, z)), material, Direction.EAST, minU, maxU, minV, maxV);
-            builder.putBakedQuad(matrixStackIn.last(), quad, instance);
+            builder.putBakedQuad(pose, quad, instance);
         }
-
-        matrixStackIn.popPose();
-
     }
 }
