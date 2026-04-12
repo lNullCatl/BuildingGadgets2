@@ -195,11 +195,10 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
     }
 
     /**
-     * renderType 1: fade the block in with per-vertex alpha modulation. submitBlockModel can't do alpha
-     * modulation (§11 open question #4 in RENDER_PORTING.md), so we route through submitCustomGeometry and
-     * apply the fade by stamping it onto each quad's QuadInstance color — putBakedQuad multiplies
-     * instance color × baked vertex color, so an alpha-only instance color (0xAA_FFFFFF) fades without
-     * touching RGB.
+     * renderType 1: fade the block in with per-vertex alpha modulation. Uses tesselateBlock for
+     * proper AO lighting (same as renderGrow), then applies fade alpha and reverses the
+     * CardinalLighting scaling. Adjacency culling is handled by skipping faces where
+     * state.cullFaces is set.
      */
     private void renderFade(
             RenderBlockBERState state,
@@ -210,7 +209,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
         BlockPos pos = state.blockPos;
         float scale = state.scale;
         float alpha = Mth.lerp(scale, 0.25f, 1f);
-        int instanceColor = ARGB.color(Math.round(alpha * 255f), 255, 255, 255);
+        int alphaInt = Math.round(alpha * 255f);
         boolean isSolid = renderBlock.isSolidRender();
         RenderType renderType = isSolid ? OurRenderTypes.RenderBlockFade : OurRenderTypes.RenderBlockFadeNoCull;
 
@@ -222,12 +221,26 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
 
         if (parts.isEmpty()) return;
 
+        BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(renderBlock);
         collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
-            QuadInstance instance = new QuadInstance();
-            instance.setLightCoords(state.lightCoords);
-            for (BlockStateModelPart part : parts) {
-                writePartQuadsWithCulling(part, buffer, pose, instance, state.tintLayers, instanceColor, state.cullFaces);
-            }
+            ModelBlockRenderer renderer = new ModelBlockRenderer(true, false, Minecraft.getInstance().getBlockColors());
+            renderer.tesselateBlock(
+                    (x, y, z, quad, instance) -> {
+                        // Skip culled faces (adjacency optimization)
+                        Direction dir = quad.direction();
+                        if (dir != null && state.cullFaces[dir.ordinal()]) return;
+                        // Apply fade alpha to each vertex color
+                        for (int v = 0; v < 4; v++) {
+                            int color = instance.getColor(v);
+                            instance.setColor(v, ARGB.color(alphaInt,
+                                    ARGB.red(color), ARGB.green(color), ARGB.blue(color)));
+                        }
+                        buffer.putBakedQuad(pose, quad, instance);
+                    },
+                    0, 0, 0,
+                    state.level, state.blockPos, renderBlock, model,
+                    renderBlock.getSeed(state.blockPos)
+            );
         });
     }
 
