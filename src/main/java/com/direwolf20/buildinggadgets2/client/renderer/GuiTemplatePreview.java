@@ -295,7 +295,7 @@ public class GuiTemplatePreview extends PictureInPictureRenderer<GuiTemplatePrev
                 // a 20-block template; a single sort from the template center is good enough.
                 Vector3f sortOrigin = new Vector3f(cachedCenterX, cachedCenterY, cachedCenterZ);
                 MeshData.SortState sortState = mesh.sortQuads(sortIndexScratch,
-                        VertexSorting.byDistance(v -> -sortOrigin.distanceSquared(v)));
+                        VertexSorting.byDistance(v -> sortOrigin.distanceSquared(v)));
                 cache.sortState = sortState;
                 java.nio.ByteBuffer sortedIdx = mesh.indexBuffer();
                 if (sortedIdx != null) {
