@@ -1,6 +1,5 @@
 package com.direwolf20.buildinggadgets2.client.blockentityrenders;
 
-import com.direwolf20.buildinggadgets2.client.renderer.DireVertexConsumer;
 import com.direwolf20.buildinggadgets2.client.renderer.DireVertexConsumerSquished;
 import com.direwolf20.buildinggadgets2.client.renderer.OurRenderTypes;
 import com.direwolf20.buildinggadgets2.client.renderer.RenderFluidBlock;
@@ -14,6 +13,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -21,13 +21,14 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
@@ -61,11 +62,37 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
         float nextScale = (float) be.nextDrawSize() / (float) be.getMaxSize();
         state.scale = Mth.clamp(Mth.lerp(partialTicks, nowScale, nextScale), 0f, 1f);
 
-        // Real-world light at the BE's position — base extractRenderState already did this, but it reads the
-        // block below us (the RenderBlock) rather than the block we're animating into. Re-sample from the
-        // client level directly so the ghost picks up the surrounding light, not the air pocket we're in.
+        // Light sampling: the base extractRenderState samples at our position, but the RenderBlock is
+        // light-transparent (propagatesSkylightDown=true, noOcclusion) so the sampled value reflects
+        // surrounding ambient light, not what the target block will look like once placed. If the target
+        // block emits light, blend that emission into the lightmap so the ghost doesn't appear darker
+        // than the real block it's about to become — this softens the brightness pop at transition.
         if (state.level != null) {
-            state.lightCoords = LevelRenderer.getLightCoords(state.level, state.blockPos);
+            int sampled = LevelRenderer.getLightCoords(state.level, state.blockPos);
+            if (state.renderBlock != null) {
+                int emission = state.renderBlock.getLightEmission(state.level, state.blockPos);
+                if (emission > 0) {
+                    sampled = LightCoordsUtil.lightCoordsWithEmission(sampled, emission);
+                }
+            }
+            state.lightCoords = sampled;
+        }
+
+        // Adjacency culling for renderFade: suppress shared faces between adjacent RenderBlocks with
+        // similar drawSize to avoid overlapping translucent quads (z-fighting / double-alpha artifacts).
+        java.util.Arrays.fill(state.cullFaces, false);
+        if (state.level != null && state.renderBlock != null && be.renderType == 1) {
+            for (Direction direction : Direction.values()) {
+                BlockEntity neighbor = state.level.getBlockEntity(be.getBlockPos().relative(direction));
+                if (neighbor instanceof RenderBlockBE neighborBE) {
+                    if (neighborBE.renderBlock != null
+                            && neighborBE.renderBlock.isSolidRender()
+                            && Math.abs(be.drawSize - neighborBE.drawSize) < 5
+                            && be.drawSize < neighborBE.drawSize) {
+                        state.cullFaces[direction.ordinal()] = true;
+                    }
+                }
+            }
         }
 
         // Resolve biome-aware block tints (grass, leaves, water, etc.). BlockColors.getTintSources
@@ -115,9 +142,10 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
     }
 
     /**
-     * renderType 0: a simple grow-from-center animation. Non-fluids use submitBlockModel (AO-lit — the
-     * vanilla-equivalent code path). Fluids go through submitCustomGeometry because FluidModel lives in
-     * a separate model set that submitBlockModel can't consume.
+     * renderType 0: a simple grow-from-center animation. Uses tesselateBlock directly so the AO lighter
+     * computes ambient occlusion against the *target* block state (not the transparent RenderBlock).
+     * This matches the 1.21.1 behavior and prevents a brightness pop at the ghost→real transition.
+     * Fluids go through submitCustomGeometry because FluidModel lives in a separate model set.
      */
     private void renderGrow(
             RenderBlockBERState state,
@@ -132,14 +160,16 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
 
         if (renderBlock.getFluidState().isEmpty()) {
             if (!parts.isEmpty()) {
-                collector.submitBlockModel(
-                        poseStack,
-                        Sheets.cutoutBlockSheet(),
-                        parts,
-                        state.tintLayers,
-                        state.lightCoords,
-                        OverlayTexture.NO_OVERLAY,
-                        0);
+                BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(renderBlock);
+                collector.submitCustomGeometry(poseStack, Sheets.cutoutBlockSheet(), (pose, buffer) -> {
+                    ModelBlockRenderer renderer = new ModelBlockRenderer(true, false, Minecraft.getInstance().getBlockColors());
+                    renderer.tesselateBlock(
+                            (x, y, z, quad, instance) -> buffer.putBakedQuad(pose, quad, instance),
+                            0, 0, 0,
+                            state.level, state.blockPos, renderBlock, model,
+                            renderBlock.getSeed(state.blockPos)
+                    );
+                });
             }
         } else {
             collector.submitCustomGeometry(poseStack, OurRenderTypes.RenderBlockFade, (pose, buffer) ->
@@ -181,7 +211,7 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
             QuadInstance instance = new QuadInstance();
             instance.setLightCoords(state.lightCoords);
             for (BlockStateModelPart part : parts) {
-                writePartQuads(part, buffer, pose, instance, state.tintLayers, instanceColor);
+                writePartQuadsWithCulling(part, buffer, pose, instance, state.tintLayers, instanceColor, state.cullFaces);
             }
         });
     }
@@ -290,6 +320,30 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
             int[] tintLayers,
             int baseColor) {
         for (Direction dir : Direction.values()) {
+            for (BakedQuad quad : part.getQuads(dir)) {
+                applyTint(instance, quad, tintLayers, baseColor);
+                buffer.putBakedQuad(pose, quad, instance);
+            }
+        }
+        for (BakedQuad quad : part.getQuads(null)) {
+            applyTint(instance, quad, tintLayers, baseColor);
+            buffer.putBakedQuad(pose, quad, instance);
+        }
+    }
+
+    /**
+     * Like writePartQuads but skips directional faces that are marked for adjacency culling.
+     */
+    private static void writePartQuadsWithCulling(
+            BlockStateModelPart part,
+            VertexConsumer buffer,
+            PoseStack.Pose pose,
+            QuadInstance instance,
+            int[] tintLayers,
+            int baseColor,
+            boolean[] cullFaces) {
+        for (Direction dir : Direction.values()) {
+            if (cullFaces[dir.ordinal()]) continue;
             for (BakedQuad quad : part.getQuads(dir)) {
                 applyTint(instance, quad, tintLayers, baseColor);
                 buffer.putBakedQuad(pose, quad, instance);
