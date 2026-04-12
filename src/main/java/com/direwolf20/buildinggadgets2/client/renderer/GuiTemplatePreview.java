@@ -125,10 +125,6 @@ public class GuiTemplatePreview extends PictureInPictureRenderer<GuiTemplatePrev
 
     @Override
     protected void renderToTexture(State state, PoseStack poseStack) {
-        // Step 1: make sure the retained GPU mesh matches this state's template. On cache miss,
-        // tesselate every StatePos into a per-layer BufferBuilder, upload each into a persistent
-        // GpuBuffer, capture the sort state for translucent re-sorting. Identity-compare the list
-        // reference — TemplateManagerGUI only swaps it out on template UUID change.
         if (state.statePosList != cachedList || !java.util.Objects.equals(state.templateUuid, cachedUuid)) {
             rebuildCache(state);
         }

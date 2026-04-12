@@ -80,6 +80,11 @@ public class PacketUpdateTemplateManager {
                     return;
 
                 copyData((ServerPlayer) player, gadgetStack, templateStack, payload.templateName());
+                // Re-push both slots so the client receives all component mutations (UUID, COPY_UUID,
+                // template name) that copyData applied in-place. In 26.1, in-place component changes
+                // on container stacks aren't reliably detected by broadcastChanges.
+                container.setItem(0, container.getStateId(), gadgetStack);
+                container.setItem(1, container.getStateId(), templateStack);
             } else if (payload.mode() == 1) { //Load
                 if (templateStack.isEmpty() || gadgetStack.isEmpty()) {
                     playSound((ServerPlayer) player, Holder.direct(SoundEvents.WAXED_SIGN_INTERACT_FAIL));
@@ -96,6 +101,8 @@ public class PacketUpdateTemplateManager {
 
                 copyData((ServerPlayer) player, templateStack, gadgetStack, payload.templateName());
                 GadgetNBT.setTemplateName(gadgetStack, GadgetNBT.getTemplateName(templateStack)); //Set gadget template name to templatestack name
+                container.setItem(0, container.getStateId(), gadgetStack);
+                container.setItem(1, container.getStateId(), templateStack);
             }
         });
     }
