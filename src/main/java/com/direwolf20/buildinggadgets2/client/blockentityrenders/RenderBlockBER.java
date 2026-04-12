@@ -1,279 +1,323 @@
 package com.direwolf20.buildinggadgets2.client.blockentityrenders;
 
-import com.direwolf20.buildinggadgets2.client.renderer.*;
+import com.direwolf20.buildinggadgets2.client.renderer.DireVertexConsumer;
+import com.direwolf20.buildinggadgets2.client.renderer.DireVertexConsumerSquished;
+import com.direwolf20.buildinggadgets2.client.renderer.OurRenderTypes;
+import com.direwolf20.buildinggadgets2.client.renderer.RenderFluidBlock;
 import com.direwolf20.buildinggadgets2.common.blockentities.RenderBlockBE;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.QuadInstance;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.color.block.BlockColors;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.block.ModelBlockRenderer;
-import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
-import java.util.BitSet;
+import java.util.ArrayList;
 import java.util.List;
 
-public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE> {
-    public RenderBlockBER(BlockEntityRendererProvider.Context p_173636_) {
-
+public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, RenderBlockBERState> {
+    public RenderBlockBER(BlockEntityRendererProvider.Context ctx) {
     }
 
     @Override
-    public void render(RenderBlockBE blockentity, float partialTicks, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightsIn, int combinedOverlayIn) {
-        Level level = blockentity.getLevel();
-        BlockPos pos = blockentity.getBlockPos();
-        int drawSize = blockentity.drawSize;
-        float nowScale = (float) (drawSize) / (float) blockentity.getMaxSize();
-        float nextScale = (float) (blockentity.nextDrawSize()) / (float) blockentity.getMaxSize();
-        float scale = (Mth.lerp(partialTicks, nowScale, nextScale));
+    public RenderBlockBERState createRenderState() {
+        return new RenderBlockBERState();
+    }
 
-        if (scale >= 1.0f)
-            scale = 1f;
-        if (scale <= 0)
-            scale = 0;
+    @Override
+    public void extractRenderState(
+            RenderBlockBE be,
+            RenderBlockBERState state,
+            float partialTicks,
+            Vec3 cameraPosition,
+            ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(be, state, partialTicks, cameraPosition, breakProgress);
+        state.renderType = be.renderType;
+        state.renderBlock = be.renderBlock;
+        state.shrinking = be.shrinking;
+        state.level = (ClientLevel) be.getLevel();
 
-        BlockState renderState = blockentity.renderBlock;
-        // We're checking here as sometimes the tile can not have a render block as it's yet to be synced
-        if (renderState == null)
+        float nowScale = (float) be.drawSize / (float) be.getMaxSize();
+        float nextScale = (float) be.nextDrawSize() / (float) be.getMaxSize();
+        state.scale = Mth.clamp(Mth.lerp(partialTicks, nowScale, nextScale), 0f, 1f);
+
+        // Real-world light at the BE's position — base extractRenderState already did this, but it reads the
+        // block below us (the RenderBlock) rather than the block we're animating into. Re-sample from the
+        // client level directly so the ghost picks up the surrounding light, not the air pocket we're in.
+        if (state.level != null) {
+            state.lightCoords = LevelRenderer.getLightCoords(state.level, state.blockPos);
+        }
+    }
+
+    @Override
+    public void submit(
+            RenderBlockBERState state,
+            PoseStack poseStack,
+            SubmitNodeCollector collector,
+            CameraRenderState camera) {
+        if (state.renderBlock == null) return;
+        if (state.level == null) return;
+
+        BlockState renderBlock = state.renderBlock;
+        BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(renderBlock);
+        List<BlockStateModelPart> parts = new ArrayList<>();
+        model.collectParts(RandomSource.create(), parts);
+
+        byte type = state.renderType;
+        if (type == 0) {
+            renderGrow(state, poseStack, collector, renderBlock, parts);
+        } else if (type == 1) {
+            renderFade(state, poseStack, collector, renderBlock, parts);
+        } else if (type == 2 || type == 3 || type == 4) {
+            boolean adjustUV = type != 2;
+            boolean bottomUp = type == 4;
+            renderSquished(state, poseStack, collector, renderBlock, parts, adjustUV, bottomUp);
+        } else if (type == 5) {
+            renderSquishedSnap(state, poseStack, collector, renderBlock, parts);
+        } else {
+            renderGrow(state, poseStack, collector, renderBlock, parts);
+        }
+    }
+
+    /**
+     * renderType 0: a simple grow-from-center animation. Non-fluids use submitBlockModel (AO-lit — the
+     * vanilla-equivalent code path). Fluids go through submitCustomGeometry because FluidModel lives in
+     * a separate model set that submitBlockModel can't consume.
+     */
+    private void renderGrow(
+            RenderBlockBERState state,
+            PoseStack poseStack,
+            SubmitNodeCollector collector,
+            BlockState renderBlock,
+            List<BlockStateModelPart> parts) {
+        float scale = state.scale;
+        poseStack.pushPose();
+        poseStack.translate((1 - scale) / 2, (1 - scale) / 2, (1 - scale) / 2);
+        poseStack.scale(scale, scale, scale);
+
+        if (renderBlock.getFluidState().isEmpty()) {
+            if (!parts.isEmpty()) {
+                collector.submitBlockModel(
+                        poseStack,
+                        Sheets.cutoutBlockSheet(),
+                        parts,
+                        new int[]{-1},
+                        state.lightCoords,
+                        OverlayTexture.NO_OVERLAY,
+                        0);
+            }
+        } else {
+            collector.submitCustomGeometry(poseStack, Sheets.cutoutBlockSheet(), (pose, buffer) ->
+                    RenderFluidBlock.renderFluidBlock(renderBlock, state.level, state.blockPos, poseStack, buffer, true));
+        }
+
+        poseStack.popPose();
+    }
+
+    /**
+     * renderType 1: fade the block in with per-vertex alpha modulation. submitBlockModel can't do alpha
+     * modulation (§11 open question #4 in RENDER_PORTING.md), so we route through submitCustomGeometry and
+     * apply the fade by stamping it onto each quad's QuadInstance color — putBakedQuad multiplies
+     * instance color × baked vertex color, so an alpha-only instance color (0xAA_FFFFFF) fades without
+     * touching RGB.
+     */
+    private void renderFade(
+            RenderBlockBERState state,
+            PoseStack poseStack,
+            SubmitNodeCollector collector,
+            BlockState renderBlock,
+            List<BlockStateModelPart> parts) {
+        BlockPos pos = state.blockPos;
+        float scale = state.scale;
+        float alpha = Mth.lerp(scale, 0.25f, 1f);
+        int instanceColor = ARGB.color(Math.round(alpha * 255f), 255, 255, 255);
+        boolean isSolid = renderBlock.isSolidRender();
+        RenderType renderType = isSolid ? OurRenderTypes.RenderBlockFade : OurRenderTypes.RenderBlockFadeNoCull;
+
+        if (!renderBlock.getFluidState().isEmpty()) {
+            collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+                VertexConsumer wrapped = new DireVertexConsumer(buffer, alpha);
+                RenderFluidBlock.renderFluidBlock(renderBlock, state.level, pos, poseStack, wrapped, false);
+            });
             return;
-
-        //drawParticle(blockentity, renderState);
-
-        BlockRenderDispatcher blockrendererdispatcher = Minecraft.getInstance().getBlockRenderer();
-        BakedModel ibakedmodel = blockrendererdispatcher.getBlockModel(renderState);
-        boolean isNormalRender = false;
-        for (Direction direction : Direction.values()) {
-            if (!ibakedmodel.getQuads(renderState, direction, RandomSource.create(), null).isEmpty()) {
-                isNormalRender = true;
-                break;
-            }
-            if (!ibakedmodel.getQuads(renderState, null, RandomSource.create(), null).isEmpty()) {
-                isNormalRender = true;
-            }
-        }
-        BlockColors blockColors = Minecraft.getInstance().getBlockColors();
-        ModelBlockRenderer modelBlockRenderer = new ModelBlockRenderer(blockColors);
-
-        if (blockentity.renderType == 0)
-            renderGrow(level, pos, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, scale, renderState, ibakedmodel, blockrendererdispatcher, modelBlockRenderer, isNormalRender);
-        else if (blockentity.renderType == 1)
-            renderFade(level, pos, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, scale, renderState, ibakedmodel, modelBlockRenderer, isNormalRender, blockentity);
-        else if (blockentity.renderType == 2 || blockentity.renderType == 3 || blockentity.renderType == 4) {
-            boolean adjustUV = blockentity.renderType != 2; //3 and 4 get their UV adjusted
-            boolean bottomUp = blockentity.renderType == 4; //4 is bottom up, 3 is not, and 2 this doesn't apply
-            renderSquished(level, pos, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, scale, renderState, ibakedmodel, blockrendererdispatcher, modelBlockRenderer, isNormalRender, adjustUV, bottomUp);
-        } else if (blockentity.renderType == 5)
-            renderSquishedSnap(level, pos, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, scale, renderState, ibakedmodel, modelBlockRenderer, isNormalRender, blockentity);
-        else
-            renderGrow(level, pos, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, scale, renderState, ibakedmodel, blockrendererdispatcher, modelBlockRenderer, isNormalRender); //Fallback in case something weird happens!
-
-    }
-
-    public void renderGrow(Level level, BlockPos pos, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightsIn, int combinedOverlayIn, float scale, BlockState renderState, BakedModel ibakedmodel, BlockRenderDispatcher blockrendererdispatcher, ModelBlockRenderer modelBlockRenderer, boolean isNormalRender) {
-        matrixStackIn.pushPose();
-        VertexConsumer builder = bufferIn.getBuffer(RenderType.cutout());
-        matrixStackIn.translate((1 - scale) / 2, (1 - scale) / 2, (1 - scale) / 2);
-        matrixStackIn.scale(scale, scale, scale);
-
-        if (renderState.getFluidState().isEmpty()) {
-            if (isNormalRender)
-                modelBlockRenderer.tesselateBlock(level, ibakedmodel, renderState, pos, matrixStackIn, builder, false, RandomSource.create(), renderState.getSeed(pos), combinedOverlayIn, ModelData.EMPTY, null);
-            else
-                blockrendererdispatcher.renderSingleBlock(renderState, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, null);
-        } else {
-            RenderFluidBlock.renderFluidBlock(renderState, level, pos, matrixStackIn, builder, true);
         }
 
-        matrixStackIn.popPose();
+        if (parts.isEmpty()) return;
+
+        collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+            QuadInstance instance = new QuadInstance();
+            instance.setColor(instanceColor);
+            instance.setLightCoords(state.lightCoords);
+            for (BlockStateModelPart part : parts) {
+                writePartQuads(part, buffer, pose, instance);
+            }
+        });
     }
 
-    public void renderSquished(Level level, BlockPos pos, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightsIn, int combinedOverlayIn, float scale, BlockState renderState, BakedModel ibakedmodel, BlockRenderDispatcher blockrendererdispatcher, ModelBlockRenderer modelBlockRenderer, boolean isNormalRender, boolean adjustUV, boolean bottomUp) {
-        matrixStackIn.pushPose();
-        VertexConsumer builder = renderState.isSolidRender(level, pos) ? bufferIn.getBuffer(OurRenderTypes.RenderBlockBackface) : bufferIn.getBuffer(OurRenderTypes.RenderBlockFadeNoCull);
+    /**
+     * renderType 2/3/4: squish/stretch animation. Needs per-vertex position rewriting + optional UV
+     * adjustment that only DireVertexConsumerSquished knows how to do. submitCustomGeometry gives us the
+     * raw VertexConsumer we wrap. AO is intentionally dropped on this path (§5.4 — AmbientOcclusionFace
+     * is gone, and reimplementing it would be hundreds of lines). Cosmetic regression per Decision B.
+     */
+    private void renderSquished(
+            RenderBlockBERState state,
+            PoseStack poseStack,
+            SubmitNodeCollector collector,
+            BlockState renderBlock,
+            List<BlockStateModelPart> parts,
+            boolean adjustUV,
+            boolean bottomUp) {
+        BlockPos pos = state.blockPos;
+        float scale = Mth.lerp(state.scale, 0f, 1f);
+        boolean isSolid = renderBlock.isSolidRender();
+        RenderType renderType = isSolid ? OurRenderTypes.RenderBlockBackface : OurRenderTypes.RenderBlockFadeNoCull;
+        // UV adjust is a solid-only trick (it assumes the block face stretches from minV to maxV across
+        // a full texture tile). Transparent blocks get a flat UV pass.
+        boolean effectiveAdjustUV = adjustUV && isSolid;
 
-        scale = Mth.lerp(scale, 0f, 1f);
-        DireVertexConsumerSquished chunksConsumer = new DireVertexConsumerSquished(builder, 0, 0, 0, 1, scale, 1, matrixStackIn.last().pose());
-        chunksConsumer.adjustUV = adjustUV;
-        chunksConsumer.bottomUp = bottomUp;
-        if (!renderState.isSolidRender(level, pos))
-            chunksConsumer.adjustUV = false;
+        if (!renderBlock.getFluidState().isEmpty()) {
+            collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+                DireVertexConsumerSquished squished = new DireVertexConsumerSquished(
+                        buffer, 0, 0, 0, 1, scale, 1, pose.pose());
+                squished.adjustUV = effectiveAdjustUV;
+                squished.bottomUp = bottomUp;
+                RenderFluidBlock.renderFluidBlock(renderBlock, state.level, pos, poseStack, squished, true);
+            });
+            return;
+        }
 
-        float[] afloat = new float[Direction.values().length * 2];
-        BitSet bitset = new BitSet(3);
-        RandomSource randomSource = RandomSource.create();
-        randomSource.setSeed(renderState.getSeed(pos));
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = pos.mutable();
-        if (!renderState.getFluidState().isEmpty()) {
-            RenderFluidBlock.renderFluidBlock(renderState, level, pos, matrixStackIn, chunksConsumer, true);
-        } else {
-            if (isNormalRender) {
-                ModelBlockRenderer.AmbientOcclusionFace modelblockrenderer$ambientocclusionface = new ModelBlockRenderer.AmbientOcclusionFace();
-                for (Direction direction : Direction.values()) {
-                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, null);
-                    if (!list.isEmpty()) {
-                        TextureAtlasSprite sprite = list.get(0).getSprite();
-                        chunksConsumer.setSprite(sprite);
-                        chunksConsumer.setDirection(direction);
-                        blockpos$mutableblockpos.setWithOffset(pos, direction);
-                        modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, chunksConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
-                    }
-                }
-                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, null);
-                if (!list.isEmpty()) {
-                    TextureAtlasSprite sprite = list.get(0).getSprite();
-                    chunksConsumer.setSprite(sprite);
-                    chunksConsumer.setDirection(null);
-                    modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, chunksConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
-                }
-            } else {
-                MyRenderMethods.renderBESquished(renderState, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, scale);
+        if (parts.isEmpty()) return;
+
+        collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+            DireVertexConsumerSquished squished = new DireVertexConsumerSquished(
+                    buffer, 0, 0, 0, 1, scale, 1, pose.pose());
+            squished.adjustUV = effectiveAdjustUV;
+            squished.bottomUp = bottomUp;
+            QuadInstance instance = new QuadInstance();
+            instance.setLightCoords(state.lightCoords);
+            for (BlockStateModelPart part : parts) {
+                writePartQuadsSquished(part, squished, pose, instance);
+            }
+        });
+    }
+
+    /**
+     * renderType 5: "snap" variant of the squish animation with a darkness modulation that fades as the
+     * block settles. Darkness is applied via the QuadInstance color (RGB multiplied, alpha left at 255)
+     * — same trick as renderFade, inverted. Dropped scale < 0.1f for non-shrinking blocks to match the
+     * 1.21.1 behavior.
+     */
+    private void renderSquishedSnap(
+            RenderBlockBERState state,
+            PoseStack poseStack,
+            SubmitNodeCollector collector,
+            BlockState renderBlock,
+            List<BlockStateModelPart> parts) {
+        if (!state.shrinking && state.scale < 0.1f) return;
+        BlockPos pos = state.blockPos;
+        float darkness = Mth.lerp(state.scale, 0.25f, 1f);
+        float scale = Mth.lerp(state.scale, 0.75f, 1f);
+        int darkChannel = Math.round(darkness * 255f);
+        int instanceColor = ARGB.color(255, darkChannel, darkChannel, darkChannel);
+        boolean isSolid = renderBlock.isSolidRender();
+        RenderType renderType = Sheets.cutoutBlockSheet();
+        boolean effectiveAdjustUV = isSolid;
+
+        if (!renderBlock.getFluidState().isEmpty()) {
+            collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+                DireVertexConsumerSquished squished = new DireVertexConsumerSquished(
+                        buffer, 0, 0, 0, 1, scale, 1, pose.pose());
+                squished.adjustUV = effectiveAdjustUV;
+                squished.bottomUp = false;
+                RenderFluidBlock.renderFluidBlock(renderBlock, state.level, pos, poseStack, squished, true);
+            });
+            return;
+        }
+
+        if (parts.isEmpty()) return;
+
+        collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+            DireVertexConsumerSquished squished = new DireVertexConsumerSquished(
+                    buffer, 0, 0, 0, 1, scale, 1, pose.pose());
+            squished.adjustUV = effectiveAdjustUV;
+            squished.bottomUp = false;
+            QuadInstance instance = new QuadInstance();
+            instance.setColor(instanceColor);
+            instance.setLightCoords(state.lightCoords);
+            for (BlockStateModelPart part : parts) {
+                writePartQuadsSquished(part, squished, pose, instance);
+            }
+        });
+    }
+
+    /**
+     * Walk every face of a BlockStateModelPart and write its quads to {@code buffer} via putBakedQuad,
+     * carrying {@code instance} (color/light/overlay) through to every quad.
+     *
+     * Biome tint is intentionally not resolved here. putBakedQuad multiplies the quad's own
+     * bakedColors() into each vertex, so plain blocks render correctly; tinted blocks (grass, leaves,
+     * water) fall back to the model's baked default color — not biome-correct, but consistent with
+     * BG2's other ghost-preview regressions. The alternative is re-tesselating via ModelBlockRenderer
+     * + a FakeWorldTintAdapter, which is several hundred lines of code for a cosmetic win.
+     */
+    private static void writePartQuads(
+            BlockStateModelPart part,
+            VertexConsumer buffer,
+            PoseStack.Pose pose,
+            QuadInstance instance) {
+        for (Direction dir : Direction.values()) {
+            for (BakedQuad quad : part.getQuads(dir)) {
+                buffer.putBakedQuad(pose, quad, instance);
             }
         }
-        matrixStackIn.popPose();
-    }
-
-    public void renderFade(Level level, BlockPos pos, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightsIn, int combinedOverlayIn, float scale, BlockState renderState, BakedModel ibakedmodel, ModelBlockRenderer modelBlockRenderer, boolean isNormalRender, RenderBlockBE thisBlockEntity) {
-        VertexConsumer builder = renderState.isSolidRender(level, pos) ? bufferIn.getBuffer(OurRenderTypes.RenderBlockFade) : bufferIn.getBuffer(OurRenderTypes.RenderBlockFadeNoCull);
-        scale = Mth.lerp(scale, 0.25f, 1f);
-        DireVertexConsumer direVertexConsumer = new DireVertexConsumer(builder, scale);
-        float[] afloat = new float[Direction.values().length * 2];
-        BitSet bitset = new BitSet(3);
-        RandomSource randomSource = RandomSource.create();
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = pos.mutable();
-        if (!renderState.getFluidState().isEmpty()) {
-            RenderFluidBlock.renderFluidBlock(renderState, level, pos, matrixStackIn, direVertexConsumer, false);
-        } else {
-            if (isNormalRender) {
-                ModelBlockRenderer.AmbientOcclusionFace modelblockrenderer$ambientocclusionface = new ModelBlockRenderer.AmbientOcclusionFace();
-                for (Direction direction : Direction.values()) {
-                    randomSource.setSeed(renderState.getSeed(pos));
-                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, null);
-                    if (!list.isEmpty()) {
-                        blockpos$mutableblockpos.setWithOffset(pos, direction);
-                        BlockEntity blockEntity = level.getBlockEntity(pos.relative(direction));
-                        boolean renderAdjacent = true;
-                        if (blockEntity instanceof RenderBlockBE renderBlockBE) {
-                            if (renderBlockBE.renderBlock != null && renderBlockBE.renderBlock.isSolidRender(level, pos) && Math.abs(thisBlockEntity.drawSize - renderBlockBE.drawSize) < 5 && thisBlockEntity.drawSize < renderBlockBE.drawSize)
-                                renderAdjacent = false;
-                        }
-                        if (renderAdjacent) {
-                            modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, direVertexConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
-                        }
-                    }
-                }
-                randomSource.setSeed(renderState.getSeed(pos));
-                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, null);
-                if (!list.isEmpty()) {
-                    modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, direVertexConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
-                }
-
-            } else {
-                MyRenderMethods.renderBETransparent(renderState, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, scale);
-            }
+        for (BakedQuad quad : part.getQuads(null)) {
+            buffer.putBakedQuad(pose, quad, instance);
         }
     }
 
-    public void renderSquishedSnap(Level level, BlockPos pos, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightsIn, int combinedOverlayIn, float scale, BlockState renderState, BakedModel ibakedmodel, ModelBlockRenderer modelBlockRenderer, boolean isNormalRender, RenderBlockBE thisRenderBlockBE) {
-        if (!thisRenderBlockBE.shrinking && scale < 0.1f) return;
-        matrixStackIn.pushPose();
-        VertexConsumer builder = bufferIn.getBuffer(RenderType.cutout());
-
-        float darkness = Mth.lerp(scale, 0.25f, 1f);
-        scale = Mth.lerp(scale, 0.75f, 1f);
-
-        DireVertexConsumerSquished chunksConsumer = new DireVertexConsumerSquished(builder, 0, 0, 0, 1, scale, 1, matrixStackIn.last().pose(), darkness, darkness, darkness);
-        chunksConsumer.adjustUV = true;
-        chunksConsumer.bottomUp = false;
-        if (!renderState.isSolidRender(level, pos))
-            chunksConsumer.adjustUV = false;
-
-        float[] afloat = new float[Direction.values().length * 2];
-        BitSet bitset = new BitSet(3);
-        RandomSource randomSource = RandomSource.create();
-        randomSource.setSeed(renderState.getSeed(pos));
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = pos.mutable();
-        if (!renderState.getFluidState().isEmpty()) {
-            RenderFluidBlock.renderFluidBlock(renderState, level, pos, matrixStackIn, chunksConsumer, true);
-        } else {
-            if (isNormalRender) {
-                ModelBlockRenderer.AmbientOcclusionFace modelblockrenderer$ambientocclusionface = new ModelBlockRenderer.AmbientOcclusionFace();
-                for (Direction direction : Direction.values()) {
-                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, null);
-                    if (!list.isEmpty()) {
-                        TextureAtlasSprite sprite = list.get(0).getSprite();
-                        chunksConsumer.setSprite(sprite);
-                        chunksConsumer.setDirection(direction);
-                        blockpos$mutableblockpos.setWithOffset(pos, direction);
-                        modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, chunksConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
-                    }
-                }
-                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, null);
-                if (!list.isEmpty()) {
-                    TextureAtlasSprite sprite = list.get(0).getSprite();
-                    chunksConsumer.setSprite(sprite);
-                    chunksConsumer.setDirection(null);
-                    modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, chunksConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
-                }
-            } else {
-                MyRenderMethods.renderBESquished(renderState, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, scale);
+    /**
+     * Squished variant of the quad walker. The squished wrapper intercepts the 3-arg addVertex and
+     * setUv calls that VertexConsumer's default putBakedQuad(Pose, quad, instance) drives. The wrapper
+     * inverts the provided pose matrix to get back to model-space before applying its squish math, so
+     * the matrix we hand it must be the same one putBakedQuad uses — which is {@code pose.pose()}.
+     * Sprite + direction must be set before each putBakedQuad so the UV-adjust branch has the data.
+     */
+    private static void writePartQuadsSquished(
+            BlockStateModelPart part,
+            DireVertexConsumerSquished squished,
+            PoseStack.Pose pose,
+            QuadInstance instance) {
+        for (Direction dir : Direction.values()) {
+            for (BakedQuad quad : part.getQuads(dir)) {
+                squished.setSprite(quad.materialInfo().sprite());
+                squished.setDirection(dir);
+                squished.putBakedQuad(pose, quad, instance);
             }
         }
-        matrixStackIn.popPose();
-    }
-
-    //Unused
-    public void renderSnapFade(Level level, BlockPos pos, PoseStack matrixStackIn, MultiBufferSource bufferIn, int combinedLightsIn, int combinedOverlayIn, float scale, BlockState renderState, BakedModel ibakedmodel, ModelBlockRenderer modelBlockRenderer, boolean isNormalRender, RenderBlockBE thisBlockEntity) {
-        VertexConsumer builder = renderState.isSolidRender(level, pos) ? bufferIn.getBuffer(OurRenderTypes.RenderBlockFade) : bufferIn.getBuffer(OurRenderTypes.RenderBlockFadeNoCull);
-        float rgbScale = Mth.lerp((float) Math.pow(scale, 2), 0.05f, 1);
-        float alphaScale = 1f;
-        if (scale < 0.5f)
-            alphaScale = Mth.lerp((float) Math.pow(scale / 0.5f, 0.25), 0.25f, 1);
-        DireVertexConsumer direVertexConsumer = new DireVertexConsumer(builder, alphaScale, rgbScale, rgbScale, rgbScale);
-        float[] afloat = new float[Direction.values().length * 2];
-        BitSet bitset = new BitSet(3);
-        RandomSource randomSource = RandomSource.create();
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = pos.mutable();
-        if (!renderState.getFluidState().isEmpty()) {
-            RenderFluidBlock.renderFluidBlock(renderState, level, pos, matrixStackIn, direVertexConsumer, false);
-        } else {
-            if (isNormalRender) {
-                ModelBlockRenderer.AmbientOcclusionFace modelblockrenderer$ambientocclusionface = new ModelBlockRenderer.AmbientOcclusionFace();
-                for (Direction direction : Direction.values()) {
-                    randomSource.setSeed(renderState.getSeed(pos));
-                    List<BakedQuad> list = ibakedmodel.getQuads(renderState, direction, randomSource, null);
-                    if (!list.isEmpty()) {
-                        blockpos$mutableblockpos.setWithOffset(pos, direction);
-                        BlockEntity blockEntity = level.getBlockEntity(pos.relative(direction));
-                        boolean renderAdjacent = true;
-                        if (blockEntity instanceof RenderBlockBE renderBlockBE) {
-                            if (renderBlockBE.renderBlock != null && renderBlockBE.renderBlock.isSolidRender(level, pos) && Math.abs(thisBlockEntity.drawSize - renderBlockBE.drawSize) < 5 && thisBlockEntity.drawSize <= renderBlockBE.drawSize)
-                                renderAdjacent = false;
-                        }
-                        if (renderAdjacent) {
-                            modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, direVertexConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
-                        }
-                    }
-                }
-                randomSource.setSeed(renderState.getSeed(pos));
-                List<BakedQuad> list = ibakedmodel.getQuads(renderState, null, randomSource, null);
-                if (!list.isEmpty()) {
-                    modelBlockRenderer.renderModelFaceAO(level, renderState, pos, matrixStackIn, direVertexConsumer, list, afloat, bitset, modelblockrenderer$ambientocclusionface, combinedOverlayIn);
-                }
-            } else {
-                MyRenderMethods.renderBETransparent(renderState, matrixStackIn, bufferIn, combinedLightsIn, combinedOverlayIn, scale);
-            }
+        for (BakedQuad quad : part.getQuads(null)) {
+            squished.setSprite(quad.materialInfo().sprite());
+            squished.setDirection(null);
+            squished.putBakedQuad(pose, quad, instance);
         }
     }
 }
