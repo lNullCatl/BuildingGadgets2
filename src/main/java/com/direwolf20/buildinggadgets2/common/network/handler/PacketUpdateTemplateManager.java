@@ -56,7 +56,13 @@ public class PacketUpdateTemplateManager {
                         playSound((ServerPlayer) player, Holder.direct(SoundEvents.WAXED_SIGN_INTERACT_FAIL));
                         return;
                     }
-                    container.setItem(1, container.getStateId(), new ItemStack(Registration.Template.get()));
+                    // Pre-assign the UUID on the template stack BEFORE placing it in the slot.
+                    // In 26.1, setItem syncs the stack to the client. If the stack arrives without
+                    // a GADGET_UUID, client-side getUUID() auto-assigns a random one, contaminating
+                    // the client copy and causing UUID mismatches on load.
+                    ItemStack newTemplate = new ItemStack(Registration.Template.get());
+                    GadgetNBT.setUUID(newTemplate);
+                    container.setItem(1, container.getStateId(), newTemplate);
                     templateStack = container.getSlot(1).getItem();
                 }
 
@@ -87,7 +93,6 @@ public class PacketUpdateTemplateManager {
                     playSound((ServerPlayer) player, Holder.direct(SoundEvents.WAXED_SIGN_INTERACT_FAIL));
                     return; //Cut and Paste gadgets can only be loaded from Redprints
                 }
-
 
                 copyData((ServerPlayer) player, templateStack, gadgetStack, payload.templateName());
                 GadgetNBT.setTemplateName(gadgetStack, GadgetNBT.getTemplateName(templateStack)); //Set gadget template name to templatestack name
