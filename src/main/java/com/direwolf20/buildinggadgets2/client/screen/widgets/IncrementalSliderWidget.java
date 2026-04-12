@@ -39,7 +39,7 @@ public class IncrementalSliderWidget extends ExtendedSlider {
     }
 
     private void renderText(GuiGraphicsExtractor guiGraphics) {
-        int color = !active ? 10526880 : (isHovered ? 16777120 : -1);
+        int color = !active ? 0xFFA0A0A0 : (isHovered ? 0xFFFFFF60 : -1);
 
         Minecraft minecraft = Minecraft.getInstance();
         guiGraphics.centeredText(minecraft.font, this.prefix.copy().append(this.getValueString()), getX() + getWidth() / 2, getY() + (getHeight() - 8) / 2, color);

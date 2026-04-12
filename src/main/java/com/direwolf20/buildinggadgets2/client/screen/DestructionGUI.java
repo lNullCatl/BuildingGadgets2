@@ -76,11 +76,17 @@ public class DestructionGUI extends Screen {
                     down.setValue(originalDown);
                     sendPacket();
                 })
-                .pos((x - 30) + 32, y + 65)
+                .pos(x - 30, y + 65)
                 .size(60, 20)
                 .build());
 
-        Button undo_button = new GuiIconActionable(x - 55, y - 75, "undo", Component.translatable("buildinggadgets2.radialmenu.undo"), false, send -> {
+        int buttonSize = 25;
+        int buttonGap = 5;
+        int numButtons = 5;
+        int totalButtonWidth = numButtons * buttonSize + (numButtons - 1) * buttonGap;
+        int buttonStartX = x - totalButtonWidth / 2;
+
+        Button undo_button = new GuiIconActionable(buttonStartX, y - 75, "undo", Component.translatable("buildinggadgets2.radialmenu.undo"), false, send -> {
             if (send) {
                 ClientPacketDistributor.sendToServer(new UndoPayload());
             }
@@ -89,7 +95,7 @@ public class DestructionGUI extends Screen {
         });
         this.addRenderableWidget(undo_button);
 
-        Button anchorButton = new GuiIconActionable(x - 25, y - 75, "anchor", Component.translatable("buildinggadgets2.radialmenu.anchor"), true, send -> {
+        Button anchorButton = new GuiIconActionable(buttonStartX + (buttonSize + buttonGap), y - 75, "anchor", Component.translatable("buildinggadgets2.radialmenu.anchor"), true, send -> {
             if (send) {
                 ClientPacketDistributor.sendToServer(new AnchorPayload());
             }
@@ -98,7 +104,7 @@ public class DestructionGUI extends Screen {
         });
         this.addRenderableWidget(anchorButton);
 
-        Button affectTiles = new GuiIconActionable(x + 5, y - 75, "affecttiles", Component.translatable("buildinggadgets2.screen.affecttiles"), true, send -> {
+        Button affectTiles = new GuiIconActionable(buttonStartX + 2 * (buttonSize + buttonGap), y - 75, "affecttiles", Component.translatable("buildinggadgets2.screen.affecttiles"), true, send -> {
             if (send) {
                 ClientPacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.AFFECT_TILES.getName()));
             }
@@ -107,7 +113,7 @@ public class DestructionGUI extends Screen {
         });
         this.addRenderableWidget(affectTiles);
 
-        Button rayTrace = new GuiIconActionable(x + 35, y - 75, "raytrace_fluid", Component.translatable("buildinggadgets2.radialmenu.raytracefluids"), true, send -> {
+        Button rayTrace = new GuiIconActionable(buttonStartX + 3 * (buttonSize + buttonGap), y - 75, "raytrace_fluid", Component.translatable("buildinggadgets2.radialmenu.raytracefluids"), true, send -> {
             if (send) {
                 ClientPacketDistributor.sendToServer(new ToggleSettingPayload(GadgetNBT.ToggleableSettings.RAYTRACE_FLUID.getName()));
             }
@@ -116,7 +122,7 @@ public class DestructionGUI extends Screen {
         });
         this.addRenderableWidget(rayTrace);
 
-        renderTypeButton = new GuiIconActionable(x + 65, y - 75, "raytrace_fluid", Component.translatable(renderType.getLang()), false, send -> {
+        renderTypeButton = new GuiIconActionable(buttonStartX + 4 * (buttonSize + buttonGap), y - 75, "raytrace_fluid", Component.translatable(renderType.getLang()), false, send -> {
             if (send) {
                 renderType = renderType.next();
                 renderTypeButton.setMessage(Component.translatable(renderType.getLang()));
