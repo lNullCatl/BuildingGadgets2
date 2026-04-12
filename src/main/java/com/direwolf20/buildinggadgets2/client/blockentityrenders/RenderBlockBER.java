@@ -5,8 +5,6 @@ import com.direwolf20.buildinggadgets2.client.renderer.OurRenderTypes;
 import com.direwolf20.buildinggadgets2.client.renderer.RenderFluidBlock;
 import com.direwolf20.buildinggadgets2.common.blockentities.RenderBlockBE;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.QuadInstance;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -21,7 +19,6 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.ARGB;
@@ -363,94 +360,6 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
                     renderBlock.getSeed(state.blockPos)
             );
         });
-    }
-
-    private static void writePartQuads(
-            BlockStateModelPart part,
-            VertexConsumer buffer,
-            PoseStack.Pose pose,
-            QuadInstance instance,
-            int[] tintLayers,
-            int baseColor) {
-        for (Direction dir : Direction.values()) {
-            for (BakedQuad quad : part.getQuads(dir)) {
-                applyTint(instance, quad, tintLayers, baseColor);
-                buffer.putBakedQuad(pose, quad, instance);
-            }
-        }
-        for (BakedQuad quad : part.getQuads(null)) {
-            applyTint(instance, quad, tintLayers, baseColor);
-            buffer.putBakedQuad(pose, quad, instance);
-        }
-    }
-
-    /**
-     * Like writePartQuads but skips directional faces that are marked for adjacency culling.
-     */
-    private static void writePartQuadsWithCulling(
-            BlockStateModelPart part,
-            VertexConsumer buffer,
-            PoseStack.Pose pose,
-            QuadInstance instance,
-            int[] tintLayers,
-            int baseColor,
-            boolean[] cullFaces) {
-        for (Direction dir : Direction.values()) {
-            if (cullFaces[dir.ordinal()]) continue;
-            for (BakedQuad quad : part.getQuads(dir)) {
-                applyTint(instance, quad, tintLayers, baseColor);
-                buffer.putBakedQuad(pose, quad, instance);
-            }
-        }
-        for (BakedQuad quad : part.getQuads(null)) {
-            applyTint(instance, quad, tintLayers, baseColor);
-            buffer.putBakedQuad(pose, quad, instance);
-        }
-    }
-
-    private static void applyTint(QuadInstance instance, BakedQuad quad, int[] tintLayers, int baseColor) {
-        int tintIndex = quad.materialInfo().tintIndex();
-        if (tintIndex != -1 && tintIndex < tintLayers.length) {
-            int tint = tintLayers[tintIndex];
-            // Multiply tint RGB with baseColor's RGB, keep baseColor's alpha.
-            int r = ((tint >> 16) & 0xFF) * ((baseColor >> 16) & 0xFF) / 255;
-            int g = ((tint >> 8) & 0xFF) * ((baseColor >> 8) & 0xFF) / 255;
-            int b = (tint & 0xFF) * (baseColor & 0xFF) / 255;
-            int a = (baseColor >> 24) & 0xFF;
-            instance.setColor(ARGB.color(a, r, g, b));
-        } else {
-            instance.setColor(baseColor);
-        }
-    }
-
-    /**
-     * Squished variant of the quad walker. The squished wrapper intercepts the 3-arg addVertex and
-     * setUv calls that VertexConsumer's default putBakedQuad(Pose, quad, instance) drives. The wrapper
-     * inverts the provided pose matrix to get back to model-space before applying its squish math, so
-     * the matrix we hand it must be the same one putBakedQuad uses — which is {@code pose.pose()}.
-     * Sprite + direction must be set before each putBakedQuad so the UV-adjust branch has the data.
-     */
-    private static void writePartQuadsSquished(
-            BlockStateModelPart part,
-            DireVertexConsumerSquished squished,
-            PoseStack.Pose pose,
-            QuadInstance instance,
-            int[] tintLayers,
-            int baseColor) {
-        for (Direction dir : Direction.values()) {
-            for (BakedQuad quad : part.getQuads(dir)) {
-                applyTint(instance, quad, tintLayers, baseColor);
-                squished.setSprite(quad.materialInfo().sprite());
-                squished.setDirection(dir);
-                squished.putBakedQuad(pose, quad, instance);
-            }
-        }
-        for (BakedQuad quad : part.getQuads(null)) {
-            applyTint(instance, quad, tintLayers, baseColor);
-            squished.setSprite(quad.materialInfo().sprite());
-            squished.setDirection(null);
-            squished.putBakedQuad(pose, quad, instance);
-        }
     }
 
 }
