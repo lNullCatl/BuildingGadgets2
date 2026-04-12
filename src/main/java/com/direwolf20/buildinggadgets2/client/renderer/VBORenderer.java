@@ -237,12 +237,12 @@ public class VBORenderer {
         // onto the RGB bits of an existing color in one op.
         final float alpha = transparency;
 
-        // Exchanger inset: nudge the ghost slightly inside the target block so its faces are ε ahead
-        // of the real block's faces on every side. The 1.21.1 code also scaled by 1.001 to extend on
-        // the far side — we drop the scale because tesselateBlock takes an origin offset, not a
-        // per-vertex scale. Loses ~0.5mm on the +X/+Y/+Z faces; the preview still reads as "this block
-        // is being replaced" and Z-fighting is suppressed by the inset alone.
+        // Exchanger overlay: the 1.21.1 code translated by -0.0005 and scaled by 1.001 so the ghost
+        // sits slightly outside the real block on all six faces, preventing Z-fighting. tesselateBlock
+        // doesn't take a scale, so we apply the offset here and scale each vertex position in the
+        // BlockQuadOutput callback below. Net effect: block renders from -0.0005 to 1.0005 per axis.
         final float exchangerInset = isExchanging ? -0.0005f : 0f;
+        final float exchangerScale = isExchanging ? 1.001f : 1f;
 
         for (StatePos pos : statePosCache) {
             BlockState renderState = fakeRenderingWorld.getBlockStateWithoutReal(pos.pos);
@@ -267,17 +267,35 @@ public class VBORenderer {
                 long seed = renderState.getSeed(pos.pos.offset(renderPos));
 
                 BlockQuadOutput out = (qx, qy, qz, quad, inst) -> {
-                    // Apply BG2's per-preview alpha to every vertex. ARGB.color(alpha, rgb) returns a new
-                    // ARGB int with the alpha byte replaced — scaleColor only touches RGB, so we go direct.
                     inst.setColor(0, ARGB.color(alpha, inst.getColor(0)));
                     inst.setColor(1, ARGB.color(alpha, inst.getColor(1)));
                     inst.setColor(2, ARGB.color(alpha, inst.getColor(2)));
                     inst.setColor(3, ARGB.color(alpha, inst.getColor(3)));
-                    // Route the quad to the layer the quad itself advertises. The atlas sprite + UV packing
-                    // is already set on the quad; putBlockBakedQuad just writes it to the builder.
                     ChunkSectionLayer layer = quad.materialInfo().layer();
                     BufferBuilder b = builders.get(layer);
-                    b.putBlockBakedQuad(qx, qy, qz, quad, inst);
+                    if (exchangerScale != 1f) {
+                        // Scale each vertex position around the block origin so the ghost extends
+                        // slightly past the real block on all 6 faces (Z-fighting prevention).
+                        org.joml.Vector3fc normal = quad.direction().getUnitVec3f();
+                        int lightEmission = quad.materialInfo().lightEmission();
+                        for (int v = 0; v < 4; v++) {
+                            org.joml.Vector3fc p = quad.position(v);
+                            long packedUv = quad.packedUV(v);
+                            int vertexColor = ARGB.multiply(inst.getColor(v), quad.bakedColors().color(v));
+                            int light = inst.getLightCoordsWithEmission(v, lightEmission);
+                            float u = net.minecraft.client.model.geom.builders.UVPair.unpackU(packedUv);
+                            float vv = net.minecraft.client.model.geom.builders.UVPair.unpackV(packedUv);
+                            b.addVertex(
+                                    p.x() * exchangerScale + qx,
+                                    p.y() * exchangerScale + qy,
+                                    p.z() * exchangerScale + qz,
+                                    vertexColor, u, vv,
+                                    inst.overlayCoords(), light,
+                                    normal.x(), normal.y(), normal.z());
+                        }
+                    } else {
+                        b.putBlockBakedQuad(qx, qy, qz, quad, inst);
+                    }
                 };
 
                 try {
