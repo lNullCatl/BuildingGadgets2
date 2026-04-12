@@ -20,6 +20,9 @@ public class BG2LanguageProvider extends LanguageProvider {
         add(Registration.RenderBlock.get(), "Render Block (DO NOT USE)");
         add(Registration.TemplateManager.get(), "Template Manager");
 
+        //Block Items
+        add(Registration.TemplateManager_ITEM.get(), "Template Manager");
+
         //Items
         add(Registration.Building_Gadget.get(), "Building Gadget");
         add(Registration.Exchanging_Gadget.get(), "Exchanging Gadget");
