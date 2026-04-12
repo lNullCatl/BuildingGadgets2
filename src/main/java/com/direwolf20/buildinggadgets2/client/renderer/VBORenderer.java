@@ -317,17 +317,18 @@ public class VBORenderer {
             cache.indexCount = mesh.drawState().indexCount();
             cache.autoIndexType = mesh.drawState().indexType();
 
-            if (layer == ChunkSectionLayer.TRANSLUCENT) {
-                // Build initial sort + upload sorted indices to a persistent GPU buffer.
-                MeshData.SortState sortState = mesh.sortQuads(sortIndexScratch, VertexSorting.byDistance(v -> -sortPos.distanceSquared(v)));
-                cache.sortState = sortState;
-                java.nio.ByteBuffer sortedIdx = mesh.indexBuffer();
-                if (sortedIdx != null) {
-                    cache.sortedIndexBuffer = device.createBuffer(
-                            () -> "BG2 preview " + layer.name() + " IBO",
-                            GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST,
-                            sortedIdx);
-                }
+            // Sort every layer — not just TRANSLUCENT. In 1.21.1 every render type bucket was
+            // sorted because BG2 draws all layers with translucent blend. Without this, SOLID
+            // quads (dirt, stone, etc.) are drawn in arbitrary tesselation order and produce the
+            // doubled-face artifact visible in ss1/ss2.
+            MeshData.SortState sortState = mesh.sortQuads(sortIndexScratch, VertexSorting.byDistance(v -> -sortPos.distanceSquared(v)));
+            cache.sortState = sortState;
+            java.nio.ByteBuffer sortedIdx = mesh.indexBuffer();
+            if (sortedIdx != null) {
+                cache.sortedIndexBuffer = device.createBuffer(
+                        () -> "BG2 preview " + layer.name() + " IBO",
+                        GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST,
+                        sortedIdx);
             }
 
             mesh.close();
@@ -415,11 +416,12 @@ public class VBORenderer {
             sortCounter++;
         }
 
-        // Push the camera-relative model-view transform onto the global RenderSystem stack.
-        // RenderType.draw() in vanilla reads RenderSystem.getModelViewMatrix() — so does our manual draw.
+        // In 26.1 the event fires inside LevelRenderer's frame graph pass, and LevelRenderer has
+        // already pushed the camera view rotation onto RenderSystem.getModelViewStack() at
+        // renderLevel entry (LevelRenderer.java:482-483). Re-multiplying evt.getModelViewMatrix()
+        // here would stack the rotation twice. Just translate by (renderPos - camera).
         Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
         modelViewStack.pushMatrix();
-        modelViewStack.mul(evt.getModelViewMatrix());
         modelViewStack.translate(
                 (float) (-projectedView.x() + renderPos.getX()),
                 (float) (-projectedView.y() + renderPos.getY()),
@@ -535,37 +537,41 @@ public class VBORenderer {
     }
 
     /**
-     * Re-sort translucent quads by distance from {@code lookingAt}. Rebuilds the sorted index buffer
-     * from the cached centroids and uploads it to the persistent GPU index buffer in-place.
+     * Re-sort every cached layer's quads by distance from the camera. In 1.21.1 every render type
+     * bucket was sorted because BG2 draws all layers with translucent blend state.
      */
     public static void sortAll(BlockPos lookingAt) {
-        LayerCache cache = layerCaches.get(ChunkSectionLayer.TRANSLUCENT);
-        if (cache == null || cache.sortState == null) return;
+        if (layerCaches.isEmpty()) return;
 
         Vec3 projectedView = Minecraft.getInstance().gameRenderer.getMainCamera().position();
         Vec3 subtracted = projectedView.subtract(lookingAt.getX(), lookingAt.getY(), lookingAt.getZ());
         Vector3f sortPos = new Vector3f((float) subtracted.x, (float) subtracted.y, (float) subtracted.z);
+        VertexSorting sorting = VertexSorting.byDistance(v -> -sortPos.distanceSquared(v));
 
-        ByteBufferBuilder.Result result = cache.sortState.buildSortedIndexBuffer(
-                sortIndexScratch,
-                VertexSorting.byDistance(v -> -sortPos.distanceSquared(v)));
-        if (result == null) return;
+        CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
+        for (Map.Entry<ChunkSectionLayer, LayerCache> entry : layerCaches.entrySet()) {
+            LayerCache cache = entry.getValue();
+            if (cache.sortState == null) continue;
 
-        try {
-            java.nio.ByteBuffer bytes = result.byteBuffer();
-            int needed = bytes.remaining();
-            CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
-            if (cache.sortedIndexBuffer == null || cache.sortedIndexBuffer.size() < needed) {
-                if (cache.sortedIndexBuffer != null) cache.sortedIndexBuffer.close();
-                cache.sortedIndexBuffer = RenderSystem.getDevice().createBuffer(
-                        () -> "BG2 preview translucent IBO (resorted)",
-                        GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST,
-                        bytes);
-            } else {
-                encoder.writeToBuffer(cache.sortedIndexBuffer.slice(0, needed), bytes);
+            ByteBufferBuilder.Result result = cache.sortState.buildSortedIndexBuffer(sortIndexScratch, sorting);
+            if (result == null) continue;
+
+            try {
+                java.nio.ByteBuffer bytes = result.byteBuffer();
+                int needed = bytes.remaining();
+                if (cache.sortedIndexBuffer == null || cache.sortedIndexBuffer.size() < needed) {
+                    if (cache.sortedIndexBuffer != null) cache.sortedIndexBuffer.close();
+                    final ChunkSectionLayer layerName = entry.getKey();
+                    cache.sortedIndexBuffer = RenderSystem.getDevice().createBuffer(
+                            () -> "BG2 preview " + layerName.name() + " IBO (resorted)",
+                            GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST,
+                            bytes);
+                } else {
+                    encoder.writeToBuffer(cache.sortedIndexBuffer.slice(0, needed), bytes);
+                }
+            } finally {
+                result.close();
             }
-        } finally {
-            result.close();
         }
     }
 
