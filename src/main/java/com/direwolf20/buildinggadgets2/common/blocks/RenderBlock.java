@@ -43,7 +43,7 @@ public class RenderBlock extends Block implements EntityBlock {
     }
 
 
-    //These 2 methods after the shadows under the block
+    //These 2 methods affect the shadows under the block
     @Override
     public boolean propagatesSkylightDown(BlockState pState) {
         return true;

@@ -142,9 +142,10 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
     }
 
     /**
-     * renderType 0: a simple grow-from-center animation. Uses tesselateBlock directly so the AO lighter
-     * computes ambient occlusion against the *target* block state (not the transparent RenderBlock).
-     * This matches the 1.21.1 behavior and prevents a brightness pop at the ghost→real transition.
+     * renderType 0: a simple grow-from-center animation. Uses tesselateBlock to write AO-shaded
+     * quads directly into the VertexConsumer, matching how the old 1.21.1 BER rendered.
+     * tesselateBlock computes per-face AO from the real level, so the ghost's shading closely
+     * matches what the chunk mesh will produce after the real block is placed.
      * Fluids go through submitCustomGeometry because FluidModel lives in a separate model set.
      */
     private void renderGrow(
@@ -161,10 +162,24 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
         if (renderBlock.getFluidState().isEmpty()) {
             if (!parts.isEmpty()) {
                 BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(renderBlock);
+                // tesselateBlock applies CardinalLighting (per-face directional shading) which
+                // the chunk mesh also applies — but the entity render pipeline the BER uses
+                // seems to double-darken these values. Undo the CardinalLighting scaling after
+                // tesselateBlock so we keep the AO but not the extra darkening.
+                net.minecraft.world.level.CardinalLighting lighting = state.level.cardinalLighting();
                 collector.submitCustomGeometry(poseStack, Sheets.cutoutBlockSheet(), (pose, buffer) -> {
                     ModelBlockRenderer renderer = new ModelBlockRenderer(true, false, Minecraft.getInstance().getBlockColors());
                     renderer.tesselateBlock(
-                            (x, y, z, quad, instance) -> buffer.putBakedQuad(pose, quad, instance),
+                            (x, y, z, quad, instance) -> {
+                                // Undo the CardinalLighting scaling that prepareQuadAmbientOcclusion applied
+                                float cardinalShade = quad.materialInfo().shade()
+                                        ? lighting.byFace(quad.direction()) : lighting.up();
+                                if (cardinalShade > 0.001f && cardinalShade < 0.999f) {
+                                    float inverse = 1.0f / cardinalShade;
+                                    instance.scaleColor(inverse);
+                                }
+                                buffer.putBakedQuad(pose, quad, instance);
+                            },
                             0, 0, 0,
                             state.level, state.blockPos, renderBlock, model,
                             renderBlock.getSeed(state.blockPos)
@@ -399,4 +414,5 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
             squished.putBakedQuad(pose, quad, instance);
         }
     }
+
 }
