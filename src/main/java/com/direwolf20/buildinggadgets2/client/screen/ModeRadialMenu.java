@@ -282,30 +282,43 @@ public class ModeRadialMenu extends Screen {
     private void updateButtons() {
         int buttonSize = 24;
         int paddingBetweenButtonsY = 10;
-        int yPosLeft = height / 4;
-        int yPosRight = height / 4;
+        int step = buttonSize + paddingBetweenButtonsY;
+
+        // Count visible buttons per side
+        int countLeft = 0;
+        int countRight = 0;
+        for (GuiEventListener widget : children()) {
+            if (!(widget instanceof PositionedIconActionable button) || !button.visible)
+                continue;
+            if (button.position == ScreenPosition.LEFT) countLeft++;
+            else if (button.position == ScreenPosition.RIGHT) countRight++;
+        }
+
+        // Center each column around the vertical midpoint (height / 2)
+        int centerY = height / 2;
+        int totalLeftHeight = countLeft * buttonSize + (countLeft - 1) * paddingBetweenButtonsY;
+        int totalRightHeight = countRight * buttonSize + (countRight - 1) * paddingBetweenButtonsY;
+        int yPosLeft = centerY - totalLeftHeight / 2;
+        int yPosRight = centerY - totalRightHeight / 2;
 
         for (GuiEventListener widget : children()) {
-            if (!(widget instanceof PositionedIconActionable button))
+            if (!(widget instanceof PositionedIconActionable button) || !button.visible)
                 continue;
-            if (!button.visible) {
-                continue;
-            }
 
             if (button.position == ScreenPosition.RIGHT) {
                 int xPos = width / 2 + 70;
-                yPosRight = yPosRight + paddingBetweenButtonsY + buttonSize;
                 button.setWidth(buttonSize);
                 button.setHeight(buttonSize);
                 button.setX(xPos);
                 button.setY(yPosRight);
+                yPosRight += step;
             } else if (button.position == ScreenPosition.LEFT) {
                 int xPos = width / 2 - 70 - buttonSize;
-                yPosLeft = yPosLeft + paddingBetweenButtonsY + buttonSize;
                 button.setWidth(buttonSize);
                 button.setHeight(buttonSize);
                 button.setX(xPos);
                 button.setY(yPosLeft);
+                yPosLeft += step;
             }
         }
     }

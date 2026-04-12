@@ -79,12 +79,11 @@ runs {
         arguments.addAll '--username', 'Direwolf20'
     }
 
-    // client2 disabled during 26.1 port. Re-enable once the base build is green.
-    //client2 {
-    //    runType 'client'
-    //    systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
-    //    arguments.addAll '--username', 'Direwolf21'
-    //}
+    client2 {
+        runType 'client'
+        systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+        arguments.addAll '--username', 'Direwolf21'
+    }
 
     server {
         systemProperty 'forge.logging.markers', 'REGISTRIES'
