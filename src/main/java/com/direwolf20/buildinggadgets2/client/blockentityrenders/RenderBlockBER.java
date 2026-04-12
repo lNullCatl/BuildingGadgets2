@@ -245,10 +245,9 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
     }
 
     /**
-     * renderType 2/3/4: squish/stretch animation. Needs per-vertex position rewriting + optional UV
-     * adjustment that only DireVertexConsumerSquished knows how to do. submitCustomGeometry gives us the
-     * raw VertexConsumer we wrap. AO is intentionally dropped on this path (§5.4 — AmbientOcclusionFace
-     * is gone, and reimplementing it would be hundreds of lines). Cosmetic regression per Decision B.
+     * renderType 2/3/4: squish/stretch animation. Uses tesselateBlock for proper AO, then routes
+     * each quad through DireVertexConsumerSquished for position/UV rewriting. Block pipeline render
+     * types — no CardinalLighting reversal needed.
      */
     private void renderSquished(
             RenderBlockBERState state,
@@ -262,8 +261,6 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
         float scale = Mth.lerp(state.scale, 0f, 1f);
         boolean isSolid = renderBlock.isSolidRender();
         RenderType renderType = isSolid ? OurRenderTypes.RenderBlockBackface : OurRenderTypes.RenderBlockFadeNoCull;
-        // UV adjust is a solid-only trick (it assumes the block face stretches from minV to maxV across
-        // a full texture tile). Transparent blocks get a flat UV pass.
         boolean effectiveAdjustUV = adjustUV && isSolid;
 
         if (!renderBlock.getFluidState().isEmpty()) {
@@ -279,24 +276,31 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
 
         if (parts.isEmpty()) return;
 
+        BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(renderBlock);
         collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
             DireVertexConsumerSquished squished = new DireVertexConsumerSquished(
                     buffer, 0, 0, 0, 1, scale, 1, pose.pose());
             squished.adjustUV = effectiveAdjustUV;
             squished.bottomUp = bottomUp;
-            QuadInstance instance = new QuadInstance();
-            instance.setLightCoords(state.lightCoords);
-            for (BlockStateModelPart part : parts) {
-                writePartQuadsSquished(part, squished, pose, instance, state.tintLayers, -1);
-            }
+            ModelBlockRenderer renderer = new ModelBlockRenderer(true, false, Minecraft.getInstance().getBlockColors());
+            renderer.tesselateBlock(
+                    (x, y, z, quad, instance) -> {
+                        squished.setSprite(quad.materialInfo().sprite());
+                        squished.setDirection(quad.direction());
+                        squished.putBakedQuad(pose, quad, instance);
+                    },
+                    0, 0, 0,
+                    state.level, state.blockPos, renderBlock, model,
+                    renderBlock.getSeed(state.blockPos)
+            );
         });
     }
 
     /**
-     * renderType 5: "snap" variant of the squish animation with a darkness modulation that fades as the
-     * block settles. Darkness is applied via the QuadInstance color (RGB multiplied, alpha left at 255)
-     * — same trick as renderFade, inverted. Dropped scale < 0.1f for non-shrinking blocks to match the
-     * 1.21.1 behavior.
+     * renderType 5: "snap" variant of the squish animation with a darkness modulation that fades
+     * as the block settles. Uses tesselateBlock for proper AO, then applies darkness via per-vertex
+     * color scaling and routes through DireVertexConsumerSquished. Uses Sheets.cutoutBlockSheet()
+     * (entity pipeline) so CardinalLighting reversal IS needed.
      */
     private void renderSquishedSnap(
             RenderBlockBERState state,
@@ -309,7 +313,6 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
         float darkness = Mth.lerp(state.scale, 0.25f, 1f);
         float scale = Mth.lerp(state.scale, 0.75f, 1f);
         int darkChannel = Math.round(darkness * 255f);
-        int instanceColor = ARGB.color(255, darkChannel, darkChannel, darkChannel);
         boolean isSolid = renderBlock.isSolidRender();
         RenderType renderType = Sheets.cutoutBlockSheet();
         boolean effectiveAdjustUV = isSolid;
@@ -327,16 +330,38 @@ public class RenderBlockBER implements BlockEntityRenderer<RenderBlockBE, Render
 
         if (parts.isEmpty()) return;
 
+        BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(renderBlock);
+        net.minecraft.world.level.CardinalLighting lighting = state.level.cardinalLighting();
         collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
             DireVertexConsumerSquished squished = new DireVertexConsumerSquished(
                     buffer, 0, 0, 0, 1, scale, 1, pose.pose());
             squished.adjustUV = effectiveAdjustUV;
             squished.bottomUp = false;
-            QuadInstance instance = new QuadInstance();
-            instance.setLightCoords(state.lightCoords);
-            for (BlockStateModelPart part : parts) {
-                writePartQuadsSquished(part, squished, pose, instance, state.tintLayers, instanceColor);
-            }
+            ModelBlockRenderer renderer = new ModelBlockRenderer(true, false, Minecraft.getInstance().getBlockColors());
+            renderer.tesselateBlock(
+                    (x, y, z, quad, instance) -> {
+                        // Undo CardinalLighting (entity pipeline render type)
+                        float cardinalShade = quad.materialInfo().shade()
+                                ? lighting.byFace(quad.direction()) : lighting.up();
+                        if (cardinalShade > 0.001f && cardinalShade < 0.999f) {
+                            instance.scaleColor(1.0f / cardinalShade);
+                        }
+                        // Apply darkness modulation
+                        for (int v = 0; v < 4; v++) {
+                            int color = instance.getColor(v);
+                            int r = ARGB.red(color) * darkChannel / 255;
+                            int g = ARGB.green(color) * darkChannel / 255;
+                            int b = ARGB.blue(color) * darkChannel / 255;
+                            instance.setColor(v, ARGB.color(ARGB.alpha(color), r, g, b));
+                        }
+                        squished.setSprite(quad.materialInfo().sprite());
+                        squished.setDirection(quad.direction());
+                        squished.putBakedQuad(pose, quad, instance);
+                    },
+                    0, 0, 0,
+                    state.level, state.blockPos, renderBlock, model,
+                    renderBlock.getSeed(state.blockPos)
+            );
         });
     }
 
