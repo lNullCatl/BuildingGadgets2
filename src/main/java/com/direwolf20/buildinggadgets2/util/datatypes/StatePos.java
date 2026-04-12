@@ -3,7 +3,6 @@ package com.direwolf20.buildinggadgets2.util.datatypes;
 import com.direwolf20.buildinggadgets2.util.GadgetUtils;
 import com.direwolf20.buildinggadgets2.util.ItemStackKey;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -12,6 +11,9 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 
+
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -105,12 +107,12 @@ public class StatePos {
         return rotatedList;
     }
 
-    public static Map<ItemStackKey, Integer> getItemList(ArrayList<StatePos> list) {
+    public static Map<ItemStackKey, Integer> getItemList(ArrayList<StatePos> list, Level level, Player player) {
         Map<ItemStackKey, Integer> itemList = new Object2IntOpenHashMap<>();
         if (list == null || list.isEmpty())
             return itemList;
         for (StatePos statePos : list) {
-            ItemStackKey itemStackKey = new ItemStackKey(GadgetUtils.getItemForBlock(statePos.state, Minecraft.getInstance().level, BlockPos.ZERO, Minecraft.getInstance().player), true);
+            ItemStackKey itemStackKey = new ItemStackKey(GadgetUtils.getItemForBlock(statePos.state, level, BlockPos.ZERO, player), true);
             if (!itemList.containsKey(itemStackKey)) //Todo Slabs, etc
                 itemList.put(itemStackKey, 1);
             else

@@ -30,7 +30,7 @@ public class Template {
     public Template(String name, ArrayList<StatePos> statePosArrayList) {
         this.name = name;
         this.statePosArrayList = BG2Data.statePosListToNBTMapArray(statePosArrayList).toString();
-        Map<ItemStackKey, Integer> requiredItemsTemp = StatePos.getItemList(statePosArrayList);
+        Map<ItemStackKey, Integer> requiredItemsTemp = StatePos.getItemList(statePosArrayList, Minecraft.getInstance().level, Minecraft.getInstance().player);
         HolderLookup.Provider registries = Minecraft.getInstance().level.registryAccess();
         for (Map.Entry<ItemStackKey, Integer> entry : requiredItemsTemp.entrySet()) {
             if (entry.getKey().getStack().isEmpty()) continue;

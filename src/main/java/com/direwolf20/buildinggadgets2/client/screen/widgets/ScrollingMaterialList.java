@@ -83,7 +83,7 @@ public class ScrollingMaterialList extends EntryList<ScrollingMaterialList.Entry
             return;
 
         //Get a list of ItemStackkey -> Amount required (Integer)
-        itemCountsMap = StatePos.getItemList(statePosArrayList);
+        itemCountsMap = StatePos.getItemList(statePosArrayList, Minecraft.getInstance().level, player);
 
         for (Map.Entry<ItemStackKey, Integer> entry : itemCountsMap.entrySet()) {
             if (entry.getKey().getStack().isEmpty()) continue;
