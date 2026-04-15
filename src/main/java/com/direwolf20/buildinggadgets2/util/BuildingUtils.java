@@ -5,10 +5,10 @@ import com.direwolf20.buildinggadgets2.common.events.ServerTickHandler;
 import com.direwolf20.buildinggadgets2.common.items.BaseGadget;
 import com.direwolf20.buildinggadgets2.common.items.GadgetBuilding;
 import com.direwolf20.buildinggadgets2.common.worlddata.BG2Data;
-// TODO(port, caps-rework): re-enable AE2/Curios imports when Transfer API port is done
+// TODO(port, caps-rework): re-enable AE2 imports when Transfer API port is done
 // import com.direwolf20.buildinggadgets2.integration.AE2Integration;
-// import com.direwolf20.buildinggadgets2.integration.CuriosIntegration;
-// import com.direwolf20.buildinggadgets2.integration.CuriosMethods;
+import com.direwolf20.buildinggadgets2.integration.CuriosIntegration;
+import com.direwolf20.buildinggadgets2.integration.CuriosMethods;
 import com.direwolf20.buildinggadgets2.util.datatypes.StatePos;
 import com.direwolf20.buildinggadgets2.util.datatypes.TagPos;
 import net.minecraft.core.BlockPos;
@@ -154,12 +154,26 @@ public class BuildingUtils {
     }
 
     public static void checkInventoryForFluids(Player player, Inventory inventory, FluidStack fluidStack, boolean simulate) {
+        // Pass a null ItemAccess (TRANSFER_API.md §7 line 357 — legal for item capabilities) so
+        // the cap provider sees the bare ItemStack and looks up its handler keyed to that
+        // exact stack instance. Going through ItemAccess.forPlayerSlot or ItemAccess.forStack
+        // can hand the provider a wrapped/copied stack, which breaks providers that cache
+        // their handler by stack identity (e.g. Sophisticated Backpacks' StorageWrapperRepository
+        // — keyed by ItemStack — would otherwise hand us a different wrapper than the one the
+        // open BackpackContainerMenu is bound to, leaving the menu stale until re-equip).
         for (int j = 0; j < inventory.getContainerSize(); j++) {
             ItemStack itemInSlot = inventory.getItem(j);
             if (itemInSlot.isEmpty()) continue;
-            ItemAccess slotAccess = ItemAccess.forPlayerSlot(player, j);
-            checkItemForFluids(slotAccess, fluidStack, simulate);
-            if (fluidStack.isEmpty()) return;
+            ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, null);
+            if (nestedHandler != null) {
+                checkItemHandlerForFluids(nestedHandler, fluidStack, simulate);
+                if (fluidStack.isEmpty()) return;
+            }
+            ResourceHandler<FluidResource> fluidHandlerCap = itemInSlot.getCapability(Capabilities.Fluid.ITEM, null);
+            if (fluidHandlerCap != null) {
+                drainFluidFromHandler(fluidHandlerCap, fluidStack, simulate);
+                if (fluidStack.isEmpty()) return;
+            }
         }
     }
 
@@ -180,10 +194,9 @@ public class BuildingUtils {
 
         if (fluidStack.isEmpty()) return true;
         //Check curious slots second:
-        // TODO(port, caps-rework): load-bearing — Curios-slot fluid extraction silently skipped
-        // if (CuriosIntegration.isLoaded()) {
-        //     CuriosMethods.removeFluidStacksFromInventory(player, fluidStack, simulate);
-        // }
+        if (CuriosIntegration.isLoaded()) {
+            CuriosMethods.removeFluidStacksFromInventory(player, fluidStack, simulate);
+        }
         if (fluidStack.isEmpty()) return true;
 
         checkInventoryForFluids(player, player.getInventory(), fluidStack, simulate);
@@ -222,11 +235,11 @@ public class BuildingUtils {
     }
 
     public static void checkInventoryForItems(Player player, Inventory inventory, List<ItemStack> testArray, boolean simulate) {
+        // See the null-ItemAccess rationale on checkInventoryForFluids above.
         for (int j = 0; j < inventory.getContainerSize(); j++) {
             ItemStack itemInSlot = inventory.getItem(j);
             if (itemInSlot.isEmpty()) continue;
-            ItemAccess slotAccess = ItemAccess.forPlayerSlot(player, j);
-            ResourceHandler<ItemResource> nestedHandler = slotAccess.getCapability(Capabilities.Item.ITEM);
+            ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, null);
             if (nestedHandler != null) {
                 checkHandlerForItems(nestedHandler, testArray, simulate);
                 if (testArray.isEmpty()) return;
@@ -261,11 +274,9 @@ public class BuildingUtils {
 
         if (testArray.isEmpty()) return true;
         //Check curious slots second:
-
-        // TODO(port, caps-rework): load-bearing — Curios-slot item extraction silently skipped
-        // if (CuriosIntegration.isLoaded()) {
-        //     CuriosMethods.removeStacksFromInventory(player, testArray, simulate);
-        // }
+        if (CuriosIntegration.isLoaded()) {
+            CuriosMethods.removeStacksFromInventory(player, testArray, simulate);
+        }
         if (testArray.isEmpty()) return true;
 
         checkInventoryForItems(player, player.getInventory(), testArray, simulate);
@@ -275,33 +286,32 @@ public class BuildingUtils {
     public static int countItemStacks(Player player, ItemStack itemStack) {
         if (itemStack.isEmpty() || itemStack.is(Items.AIR)) return 0;
         Inventory playerInventory = player.getInventory();
-        int counter = 0;
+        // Mutable holder so the Curios lambda can accumulate.
+        int[] counter = new int[]{0};
 
         //Check curious slots first:
-        // TODO(port, caps-rework): load-bearing — Curios-slot item counting silently skipped
-        // if (CuriosIntegration.isLoaded()) {
-        //     CuriosMethods.countItemStacks(player, itemStack, counter);
-        // }
+        if (CuriosIntegration.isLoaded()) {
+            CuriosMethods.countItemStacks(player, itemStack, counter);
+        }
 
         for (int i = 0; i < playerInventory.getContainerSize(); i++) {
             ItemStack slotStack = playerInventory.getItem(i);
             if (slotStack.isEmpty()) continue;
-            ItemAccess slotAccess = ItemAccess.forPlayerSlot(player, i);
-            ResourceHandler<ItemResource> nestedHandler = slotAccess.getCapability(Capabilities.Item.ITEM);
+            ResourceHandler<ItemResource> nestedHandler = slotStack.getCapability(Capabilities.Item.ITEM, null);
             if (nestedHandler != null) {
                 int size = nestedHandler.size();
                 for (int j = 0; j < size; j++) {
                     ItemResource nestedResource = nestedHandler.getResource(j);
                     if (nestedResource.isEmpty()) continue;
                     if (ItemStack.isSameItem(nestedResource.toStack(), itemStack))
-                        counter += nestedHandler.getAmountAsInt(j);
+                        counter[0] += nestedHandler.getAmountAsInt(j);
                 }
             } else {
                 if (ItemStack.isSameItem(slotStack, itemStack))
-                    counter += slotStack.getCount();
+                    counter[0] += slotStack.getCount();
             }
         }
-        return counter;
+        return counter[0];
     }
 
     public static void giveFluidToPlayer(Player player, FluidStack returnedFluid, GlobalPos boundInventory, Direction direction) {
@@ -320,18 +330,25 @@ public class BuildingUtils {
         if (returnedFluid.isEmpty()) return;
 
         //Look for matching itemstacks inside curios inventories second - if found, insert there!
-        // TODO(port, caps-rework): load-bearing — Curios-slot fluid insertion silently skipped
-        // if (CuriosIntegration.isLoaded()) {
-        //     CuriosMethods.giveFluidToPlayer(player, returnedFluid);
-        // }
+        if (CuriosIntegration.isLoaded()) {
+            CuriosMethods.giveFluidToPlayer(player, returnedFluid);
+        }
+        if (returnedFluid.isEmpty()) return;
         //Now look inside the players inventory
         Inventory playerInventory = player.getInventory();
         for (int i = 0; i < playerInventory.getContainerSize(); i++) { //If this fails the fluid just gets voided!
             ItemStack slotStack = playerInventory.getItem(i);
             if (slotStack.isEmpty()) continue;
-            ItemAccess slotAccess = ItemAccess.forPlayerSlot(player, i);
-            insertFluidIntoItem(slotAccess, returnedFluid, false);
-            if (returnedFluid.isEmpty()) return;
+            ResourceHandler<ItemResource> nestedHandler = slotStack.getCapability(Capabilities.Item.ITEM, null);
+            if (nestedHandler != null) {
+                insertFluidIntoItemHandler(nestedHandler, returnedFluid, false);
+                if (returnedFluid.isEmpty()) return;
+            }
+            ResourceHandler<FluidResource> fluidHandlerCap = slotStack.getCapability(Capabilities.Fluid.ITEM, null);
+            if (fluidHandlerCap != null) {
+                insertFluidIntoHandler(fluidHandlerCap, returnedFluid, false);
+                if (returnedFluid.isEmpty()) return;
+            }
         }
     }
 
@@ -354,18 +371,16 @@ public class BuildingUtils {
         ItemStack realReturnedItem = tempReturnedItem.copy();
 
         //Look for matching itemstacks inside curios inventories second - if found, insert there!
-        // TODO(port, caps-rework): load-bearing — Curios-slot item insertion silently skipped
-        // if (CuriosIntegration.isLoaded()) {
-        //     CuriosMethods.giveItemToPlayer(player, realReturnedItem);
-        //     if (realReturnedItem.isEmpty()) return;
-        // }
+        if (CuriosIntegration.isLoaded()) {
+            CuriosMethods.giveItemToPlayer(player, realReturnedItem);
+            if (realReturnedItem.isEmpty()) return;
+        }
         //Now look for bags inside the players inventory
         Inventory playerInventory = player.getInventory();
         for (int i = 0; i < playerInventory.getContainerSize(); i++) {
             ItemStack slotStack = playerInventory.getItem(i);
             if (slotStack.isEmpty()) continue;
-            ItemAccess slotAccess = ItemAccess.forPlayerSlot(player, i);
-            ResourceHandler<ItemResource> nestedHandler = slotAccess.getCapability(Capabilities.Item.ITEM);
+            ResourceHandler<ItemResource> nestedHandler = slotStack.getCapability(Capabilities.Item.ITEM, null);
             if (nestedHandler != null) {
                 int inserted = ResourceHandlerUtil.insertStacking(nestedHandler, ItemResource.of(realReturnedItem), realReturnedItem.getCount(), null);
                 realReturnedItem.shrink(inserted);
