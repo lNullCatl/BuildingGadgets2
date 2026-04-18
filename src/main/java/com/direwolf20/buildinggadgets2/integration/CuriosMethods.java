@@ -6,6 +6,7 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import top.theillusivec4.curios.api.CuriosApi;
@@ -37,7 +38,7 @@ public class CuriosMethods {
                 ItemStack itemInSlot = stackHandler.getStacks().getStackInSlot(j);
                 if (itemInSlot.isEmpty()) continue;
                 int before = fluidStack.getAmount();
-                ResourceHandler<ItemResource> nestedItemHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, null);
+                ResourceHandler<ItemResource> nestedItemHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
                 if (nestedItemHandler != null) {
                     checkItemHandlerForFluids(nestedItemHandler, fluidStack, simulate);
                 }
@@ -58,7 +59,7 @@ public class CuriosMethods {
             for (int j = 0; j < stackHandler.getSlots(); j++) {
                 ItemStack itemInSlot = stackHandler.getStacks().getStackInSlot(j);
                 if (itemInSlot.isEmpty()) continue;
-                ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, null);
+                ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
                 if (nestedHandler != null) {
                     int before = testArray.size();
                     checkHandlerForItems(nestedHandler, testArray, simulate);
@@ -76,7 +77,7 @@ public class CuriosMethods {
             for (int i = 0; i < stackHandler.getSlots(); i++) {
                 ItemStack itemInSlot = stackHandler.getStacks().getStackInSlot(i);
                 if (itemInSlot.isEmpty()) continue;
-                ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, null);
+                ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
                 if (nestedHandler == null) continue;
                 int size = nestedHandler.size();
                 for (int j = 0; j < size; j++) {
@@ -96,7 +97,7 @@ public class CuriosMethods {
                 ItemStack itemInSlot = stackHandler.getStacks().getStackInSlot(i);
                 if (itemInSlot.isEmpty()) continue;
                 int before = returnedFluid.getAmount();
-                ResourceHandler<ItemResource> nestedItemHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, null);
+                ResourceHandler<ItemResource> nestedItemHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
                 if (nestedItemHandler != null) {
                     insertFluidIntoItemHandler(nestedItemHandler, returnedFluid, false);
                 }
@@ -117,7 +118,7 @@ public class CuriosMethods {
             for (int i = 0; i < stackHandler.getSlots(); i++) {
                 ItemStack itemInSlot = stackHandler.getStacks().getStackInSlot(i);
                 if (itemInSlot.isEmpty()) continue;
-                ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, null);
+                ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
                 if (nestedHandler == null) continue;
                 int inserted = ResourceHandlerUtil.insertStacking(nestedHandler, ItemResource.of(realReturnedItem), realReturnedItem.getCount(), null);
                 if (inserted > 0) {
