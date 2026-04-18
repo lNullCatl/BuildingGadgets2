@@ -20,6 +20,7 @@ import com.direwolf20.buildinggadgets2.util.modes.BaseMode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.KeyMapping;
@@ -27,17 +28,21 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.gui.render.TextureSetup;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import org.joml.Matrix3x2f;
 import org.joml.Matrix3x2fStack;
+import org.jspecify.annotations.Nullable;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -339,16 +344,7 @@ public class ModeRadialMenu extends Screen {
         int radiusMin = 26;
         int radiusMax = 60;
         double dist = new Vec3(x, y, 0).distanceTo(new Vec3(mx, my, 0));
-        boolean inRange = false;
-        //Highlights Segments if mouse over
-        if (this.segments != 0) {
-            inRange = dist > radiusMin && dist < radiusMax;
-            for (GuiEventListener button : children()) {
-                if (button instanceof PositionedIconActionable) {
-                    ((PositionedIconActionable) button).setFaded(inRange);
-                }
-            }
-        }
+        boolean inRange = this.segments != 0 && dist > radiusMin && dist < radiusMax;
 
 
         // This triggers the animation on creation - only affects side buttons and slider(s)
@@ -381,6 +377,8 @@ public class ModeRadialMenu extends Screen {
         boolean shouldCenter = (this.segments + 2) % 4 == 0;
         int indexBottom = this.segments / 4;
         int indexTop = indexBottom + this.segments / 2;
+        Matrix3x2f sliceMatrix = new Matrix3x2f(matrices);
+        ScreenRectangle scissorArea = guiGraphics.peekScissorStack();
         for (int seg = 0; seg < this.segments; seg++) {
             boolean mouseInSector = this.isCursorInSlice(angle, totalDeg, degPer, inRange);
             //This makes the individual segments pop up one after another, a cool lil animation. Adjust the 6f to change it
@@ -403,21 +401,23 @@ public class ModeRadialMenu extends Screen {
                 r = g = b = 1F;
             }
 
-            MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-            VertexConsumer buffer = bufferSource.getBuffer(OurRenderTypes.TRIANGLE_STRIP);
+            float midRad = (float) ((degPer / 2 + totalDeg) / 180F * Math.PI);
+            int xp = (int) (x + Math.cos(midRad) * radius);
+            int yp = (int) (y + Math.sin(midRad) * radius);
+            nameData.add(new NameDisplayData(xp, yp, mouseInSector, shouldCenter && (seg == indexBottom || seg == indexTop)));
 
-            for (float i = degPer; i >= 0; i--) {
-                float rad = (float) ((i + totalDeg) / 180F * Math.PI);
-                float xp = (float) (x + Math.cos(rad) * radius);
-                float yp = (float) (y + Math.sin(rad) * radius);
-                if ((int) i == (int) (degPer / 2))
-                    nameData.add(new NameDisplayData((int) xp, (int) yp, mouseInSector, shouldCenter && (seg == indexBottom || seg == indexTop)));
-
-                buffer.addVertexWith2DPose(matrices, (float) (x + Math.cos(rad) * radius / 2.3F), (float) (y + Math.sin(rad) * radius / 2.3F)).setColor(r, g, b, a);
-                buffer.addVertexWith2DPose(matrices, xp, yp).setColor(r, g, b, a);
-            }
-
-            bufferSource.endBatch(OurRenderTypes.TRIANGLE_STRIP);
+            int color = ARGB.color((int) (a * 255F), (int) (r * 255F), (int) (g * 255F), (int) (b * 255F));
+            guiGraphics.submitGuiElementRenderState(new PieSliceRenderState(
+                    OurRenderTypes.DEBUG_TRIANGLE_STRIP,
+                    sliceMatrix,
+                    x,
+                    y,
+                    totalDeg,
+                    degPer,
+                    radius,
+                    color,
+                    scissorArea
+            ));
             totalDeg += degPer;
         }
 
@@ -573,6 +573,45 @@ public class ModeRadialMenu extends Screen {
 
         PositionedIconActionable(Component message, String icon, ScreenPosition position, Predicate<Boolean> action) {
             this(message, icon, position, true, action);
+        }
+    }
+
+    private record PieSliceRenderState(
+            RenderPipeline pipeline,
+            Matrix3x2f pose,
+            int cx,
+            int cy,
+            float startDeg,
+            float spanDeg,
+            float outerRadius,
+            int color,
+            @Nullable ScreenRectangle scissorArea
+    ) implements GuiElementRenderState {
+        private static final float INNER_RATIO = 1F / 2.3F;
+
+        @Override
+        public void buildVertices(VertexConsumer buffer) {
+            if (outerRadius <= 0F || spanDeg <= 0F) return;
+            float innerRadius = outerRadius * INNER_RATIO;
+            for (float i = spanDeg; i >= 0; i--) {
+                float rad = (i + startDeg) * (float) Math.PI / 180F;
+                float cos = (float) Math.cos(rad);
+                float sin = (float) Math.sin(rad);
+                buffer.addVertexWith2DPose(pose, cx + cos * innerRadius, cy + sin * innerRadius).setColor(color);
+                buffer.addVertexWith2DPose(pose, cx + cos * outerRadius, cy + sin * outerRadius).setColor(color);
+            }
+        }
+
+        @Override
+        public TextureSetup textureSetup() {
+            return TextureSetup.noTexture();
+        }
+
+        @Override
+        public @Nullable ScreenRectangle bounds() {
+            int r = (int) Math.ceil(outerRadius) + 1;
+            ScreenRectangle rect = new ScreenRectangle(cx - r, cy - r, r * 2, r * 2).transformMaxBounds(pose);
+            return scissorArea != null ? scissorArea.intersection(rect) : rect;
         }
     }
 
