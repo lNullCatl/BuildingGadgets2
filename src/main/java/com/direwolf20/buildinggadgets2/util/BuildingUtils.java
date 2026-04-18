@@ -164,7 +164,7 @@ public class BuildingUtils {
         for (int j = 0; j < inventory.getContainerSize(); j++) {
             ItemStack itemInSlot = inventory.getItem(j);
             if (itemInSlot.isEmpty()) continue;
-            ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, null);
+            ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
             if (nestedHandler != null) {
                 checkItemHandlerForFluids(nestedHandler, fluidStack, simulate);
                 if (fluidStack.isEmpty()) return;
@@ -239,7 +239,7 @@ public class BuildingUtils {
         for (int j = 0; j < inventory.getContainerSize(); j++) {
             ItemStack itemInSlot = inventory.getItem(j);
             if (itemInSlot.isEmpty()) continue;
-            ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, null);
+            ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
             if (nestedHandler != null) {
                 checkHandlerForItems(nestedHandler, testArray, simulate);
                 if (testArray.isEmpty()) return;
@@ -297,7 +297,7 @@ public class BuildingUtils {
         for (int i = 0; i < playerInventory.getContainerSize(); i++) {
             ItemStack slotStack = playerInventory.getItem(i);
             if (slotStack.isEmpty()) continue;
-            ResourceHandler<ItemResource> nestedHandler = slotStack.getCapability(Capabilities.Item.ITEM, null);
+            ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(slotStack).getCapability(Capabilities.Item.ITEM);
             if (nestedHandler != null) {
                 int size = nestedHandler.size();
                 for (int j = 0; j < size; j++) {
@@ -339,7 +339,7 @@ public class BuildingUtils {
         for (int i = 0; i < playerInventory.getContainerSize(); i++) { //If this fails the fluid just gets voided!
             ItemStack slotStack = playerInventory.getItem(i);
             if (slotStack.isEmpty()) continue;
-            ResourceHandler<ItemResource> nestedHandler = slotStack.getCapability(Capabilities.Item.ITEM, null);
+            ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(slotStack).getCapability(Capabilities.Item.ITEM);
             if (nestedHandler != null) {
                 insertFluidIntoItemHandler(nestedHandler, returnedFluid, false);
                 if (returnedFluid.isEmpty()) return;
@@ -380,7 +380,7 @@ public class BuildingUtils {
         for (int i = 0; i < playerInventory.getContainerSize(); i++) {
             ItemStack slotStack = playerInventory.getItem(i);
             if (slotStack.isEmpty()) continue;
-            ResourceHandler<ItemResource> nestedHandler = slotStack.getCapability(Capabilities.Item.ITEM, null);
+            ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(slotStack).getCapability(Capabilities.Item.ITEM);
             if (nestedHandler != null) {
                 int inserted = ResourceHandlerUtil.insertStacking(nestedHandler, ItemResource.of(realReturnedItem), realReturnedItem.getCount(), null);
                 realReturnedItem.shrink(inserted);
