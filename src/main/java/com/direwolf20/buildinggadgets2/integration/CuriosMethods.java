@@ -16,13 +16,15 @@ import java.util.ArrayList;
 import static com.direwolf20.buildinggadgets2.util.BuildingUtils.*;
 
 // Curios 15.0 keeps the legacy IItemHandlerModifiable on getStacks(), so we read the
-// per-slot ItemStack the old way and look up its Item/Fluid capability with a null
-// ItemAccess context (TRANSFER_API.md §7 line 357 — legal for item caps). Passing null
-// keeps the cap provider working off the bare ItemStack reference; wrapping through
-// ItemAccess.forStack would hand the provider a copy/wrapper, which breaks providers
-// that cache their handler by stack identity (e.g. Sophisticated Backpacks'
-// StorageWrapperRepository — keyed by ItemStack — would otherwise hand us a different
-// wrapper than the one the open BackpackContainerMenu is bound to).
+// per-slot ItemStack the old way and look up its capability via
+//   itemInSlot.getCapability(cap, ItemAccess.forStack(itemInSlot))
+// This preserves ItemStack identity for providers that cache their handler by stack
+// (e.g. Sophisticated Backpacks' StorageWrapperRepository — otherwise the menu goes
+// stale), AND supplies a non-null ItemAccess for providers that use NeoForge's
+// ItemAccessItemHandler / ItemAccessEnergyHandler. Going through
+// ItemAccess.forStack(stack).getCapability(cap) instead loses identity because the
+// default ItemAccess.getCapability passes getResource().toStack() — a fresh copy — to
+// the provider factory.
 //
 // We still round-trip through stackHandler.getStacks().setStackInSlot(j, itemInSlot)
 // after a successful mutation: in-place component writes don't trigger Curios'
@@ -38,12 +40,12 @@ public class CuriosMethods {
                 ItemStack itemInSlot = stackHandler.getStacks().getStackInSlot(j);
                 if (itemInSlot.isEmpty()) continue;
                 int before = fluidStack.getAmount();
-                ResourceHandler<ItemResource> nestedItemHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
+                ResourceHandler<ItemResource> nestedItemHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, ItemAccess.forStack(itemInSlot));
                 if (nestedItemHandler != null) {
                     checkItemHandlerForFluids(nestedItemHandler, fluidStack, simulate);
                 }
                 if (!fluidStack.isEmpty()) {
-                    ResourceHandler<FluidResource> fluidCap = itemInSlot.getCapability(Capabilities.Fluid.ITEM, null);
+                    ResourceHandler<FluidResource> fluidCap = itemInSlot.getCapability(Capabilities.Fluid.ITEM, ItemAccess.forStack(itemInSlot));
                     if (fluidCap != null) drainFluidFromHandler(fluidCap, fluidStack, simulate);
                 }
                 if (!simulate && fluidStack.getAmount() != before)
@@ -59,7 +61,7 @@ public class CuriosMethods {
             for (int j = 0; j < stackHandler.getSlots(); j++) {
                 ItemStack itemInSlot = stackHandler.getStacks().getStackInSlot(j);
                 if (itemInSlot.isEmpty()) continue;
-                ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
+                ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, ItemAccess.forStack(itemInSlot));
                 if (nestedHandler != null) {
                     int before = testArray.size();
                     checkHandlerForItems(nestedHandler, testArray, simulate);
@@ -77,7 +79,7 @@ public class CuriosMethods {
             for (int i = 0; i < stackHandler.getSlots(); i++) {
                 ItemStack itemInSlot = stackHandler.getStacks().getStackInSlot(i);
                 if (itemInSlot.isEmpty()) continue;
-                ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
+                ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, ItemAccess.forStack(itemInSlot));
                 if (nestedHandler == null) continue;
                 int size = nestedHandler.size();
                 for (int j = 0; j < size; j++) {
@@ -97,12 +99,12 @@ public class CuriosMethods {
                 ItemStack itemInSlot = stackHandler.getStacks().getStackInSlot(i);
                 if (itemInSlot.isEmpty()) continue;
                 int before = returnedFluid.getAmount();
-                ResourceHandler<ItemResource> nestedItemHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
+                ResourceHandler<ItemResource> nestedItemHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, ItemAccess.forStack(itemInSlot));
                 if (nestedItemHandler != null) {
                     insertFluidIntoItemHandler(nestedItemHandler, returnedFluid, false);
                 }
                 if (!returnedFluid.isEmpty()) {
-                    ResourceHandler<FluidResource> fluidCap = itemInSlot.getCapability(Capabilities.Fluid.ITEM, null);
+                    ResourceHandler<FluidResource> fluidCap = itemInSlot.getCapability(Capabilities.Fluid.ITEM, ItemAccess.forStack(itemInSlot));
                     if (fluidCap != null) insertFluidIntoHandler(fluidCap, returnedFluid, false);
                 }
                 if (returnedFluid.getAmount() != before)
@@ -118,7 +120,7 @@ public class CuriosMethods {
             for (int i = 0; i < stackHandler.getSlots(); i++) {
                 ItemStack itemInSlot = stackHandler.getStacks().getStackInSlot(i);
                 if (itemInSlot.isEmpty()) continue;
-                ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
+                ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, ItemAccess.forStack(itemInSlot));
                 if (nestedHandler == null) continue;
                 int inserted = ResourceHandlerUtil.insertStacking(nestedHandler, ItemResource.of(realReturnedItem), realReturnedItem.getCount(), null);
                 if (inserted > 0) {

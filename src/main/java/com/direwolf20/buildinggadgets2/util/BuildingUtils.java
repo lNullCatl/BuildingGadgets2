@@ -154,22 +154,26 @@ public class BuildingUtils {
     }
 
     public static void checkInventoryForFluids(Player player, Inventory inventory, FluidStack fluidStack, boolean simulate) {
-        // Pass a null ItemAccess (TRANSFER_API.md §7 line 357 — legal for item capabilities) so
-        // the cap provider sees the bare ItemStack and looks up its handler keyed to that
-        // exact stack instance. Going through ItemAccess.forPlayerSlot or ItemAccess.forStack
-        // can hand the provider a wrapped/copied stack, which breaks providers that cache
-        // their handler by stack identity (e.g. Sophisticated Backpacks' StorageWrapperRepository
-        // — keyed by ItemStack — would otherwise hand us a different wrapper than the one the
-        // open BackpackContainerMenu is bound to, leaving the menu stale until re-equip).
+        // Capability lookup pattern: slotStack.getCapability(cap, ItemAccess.forStack(slotStack)).
+        // This preserves both:
+        //   1. ItemStack identity — ItemStack.getCapability(cap, ctx) passes `self()` (the live
+        //      slotStack) to the provider factory, so mods that cache their handler by
+        //      ItemStack identity (e.g. Sophisticated Backpacks' StorageWrapperRepository)
+        //      hit the same cache entry the open menu is bound to.
+        //   2. A non-null ItemAccess context — required by providers that use NeoForge's
+        //      ItemAccessItemHandler / ItemAccessEnergyHandler and dereference the context.
+        // Going through ItemAccess.forStack(slotStack).getCapability(cap) instead loses #1
+        // because the default ItemAccess.getCapability passes `getResource().toStack()` — a
+        // fresh ItemStack instance — to the provider, producing a cache miss in mods like SB.
         for (int j = 0; j < inventory.getContainerSize(); j++) {
             ItemStack itemInSlot = inventory.getItem(j);
             if (itemInSlot.isEmpty()) continue;
-            ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
+            ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, ItemAccess.forStack(itemInSlot));
             if (nestedHandler != null) {
                 checkItemHandlerForFluids(nestedHandler, fluidStack, simulate);
                 if (fluidStack.isEmpty()) return;
             }
-            ResourceHandler<FluidResource> fluidHandlerCap = itemInSlot.getCapability(Capabilities.Fluid.ITEM, null);
+            ResourceHandler<FluidResource> fluidHandlerCap = itemInSlot.getCapability(Capabilities.Fluid.ITEM, ItemAccess.forStack(itemInSlot));
             if (fluidHandlerCap != null) {
                 drainFluidFromHandler(fluidHandlerCap, fluidStack, simulate);
                 if (fluidStack.isEmpty()) return;
@@ -239,7 +243,7 @@ public class BuildingUtils {
         for (int j = 0; j < inventory.getContainerSize(); j++) {
             ItemStack itemInSlot = inventory.getItem(j);
             if (itemInSlot.isEmpty()) continue;
-            ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(itemInSlot).getCapability(Capabilities.Item.ITEM);
+            ResourceHandler<ItemResource> nestedHandler = itemInSlot.getCapability(Capabilities.Item.ITEM, ItemAccess.forStack(itemInSlot));
             if (nestedHandler != null) {
                 checkHandlerForItems(nestedHandler, testArray, simulate);
                 if (testArray.isEmpty()) return;
@@ -297,7 +301,7 @@ public class BuildingUtils {
         for (int i = 0; i < playerInventory.getContainerSize(); i++) {
             ItemStack slotStack = playerInventory.getItem(i);
             if (slotStack.isEmpty()) continue;
-            ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(slotStack).getCapability(Capabilities.Item.ITEM);
+            ResourceHandler<ItemResource> nestedHandler = slotStack.getCapability(Capabilities.Item.ITEM, ItemAccess.forStack(slotStack));
             if (nestedHandler != null) {
                 int size = nestedHandler.size();
                 for (int j = 0; j < size; j++) {
@@ -339,12 +343,12 @@ public class BuildingUtils {
         for (int i = 0; i < playerInventory.getContainerSize(); i++) { //If this fails the fluid just gets voided!
             ItemStack slotStack = playerInventory.getItem(i);
             if (slotStack.isEmpty()) continue;
-            ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(slotStack).getCapability(Capabilities.Item.ITEM);
+            ResourceHandler<ItemResource> nestedHandler = slotStack.getCapability(Capabilities.Item.ITEM, ItemAccess.forStack(slotStack));
             if (nestedHandler != null) {
                 insertFluidIntoItemHandler(nestedHandler, returnedFluid, false);
                 if (returnedFluid.isEmpty()) return;
             }
-            ResourceHandler<FluidResource> fluidHandlerCap = slotStack.getCapability(Capabilities.Fluid.ITEM, null);
+            ResourceHandler<FluidResource> fluidHandlerCap = slotStack.getCapability(Capabilities.Fluid.ITEM, ItemAccess.forStack(slotStack));
             if (fluidHandlerCap != null) {
                 insertFluidIntoHandler(fluidHandlerCap, returnedFluid, false);
                 if (returnedFluid.isEmpty()) return;
@@ -380,7 +384,7 @@ public class BuildingUtils {
         for (int i = 0; i < playerInventory.getContainerSize(); i++) {
             ItemStack slotStack = playerInventory.getItem(i);
             if (slotStack.isEmpty()) continue;
-            ResourceHandler<ItemResource> nestedHandler = ItemAccess.forStack(slotStack).getCapability(Capabilities.Item.ITEM);
+            ResourceHandler<ItemResource> nestedHandler = slotStack.getCapability(Capabilities.Item.ITEM, ItemAccess.forStack(slotStack));
             if (nestedHandler != null) {
                 int inserted = ResourceHandlerUtil.insertStacking(nestedHandler, ItemResource.of(realReturnedItem), realReturnedItem.getCount(), null);
                 realReturnedItem.shrink(inserted);
