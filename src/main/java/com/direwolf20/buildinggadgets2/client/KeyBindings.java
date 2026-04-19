@@ -6,6 +6,7 @@ import com.direwolf20.buildinggadgets2.common.items.BaseGadget;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -26,6 +27,9 @@ public class KeyBindings {
     private static final Logger LOGGER = LoggerFactory.getLogger(KeyBindings.class);
     private static final KeyConflictContextGadget CONFLICT_CONTEXT_GADGET = new KeyConflictContextGadget();
 
+    public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(
+            Identifier.fromNamespaceAndPath(BuildingGadgets2.MODID, "main"));
+
     private static final List<KeyMapping> keyMappings = new ArrayList<>();
 
     public static KeyMapping menuSettings = createBinding("settings_menu", GLFW.GLFW_KEY_G);
@@ -34,8 +38,7 @@ public class KeyBindings {
     public static KeyMapping range = createBinding("range", GLFW.GLFW_KEY_R);
 
     private static KeyMapping createBinding(String name, int key) {
-        // TODO(port): keybind category was the lang key "key.buildinggadgets2.category"; 26.1 requires a KeyMapping.Category record. Using GAMEPLAY for now; revisit to register a dedicated BG2 category via RegisterKeyMappingsEvent#registerCategory.
-        KeyMapping keyBinding = new KeyMapping(getKey(name), CONFLICT_CONTEXT_GADGET, InputConstants.Type.KEYSYM.getOrCreate(key), KeyMapping.Category.GAMEPLAY);
+        KeyMapping keyBinding = new KeyMapping(getKey(name), CONFLICT_CONTEXT_GADGET, InputConstants.Type.KEYSYM.getOrCreate(key), CATEGORY);
         keyMappings.add(keyBinding);
         return keyBinding;
     }

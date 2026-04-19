@@ -44,7 +44,7 @@ public class BG2LanguageProvider extends LanguageProvider {
         add("buildinggadgets2.templatename", "Name: %s");
 
         //Keys
-        add("key.buildinggadgets2.category", "Building Gadgets 2");
+        add("key.category.buildinggadgets2.main", "Building Gadgets 2");
         add("key.buildinggadgets2.anchor", "Anchor");
         add("key.buildinggadgets2.range", "Range");
         add("key.buildinggadgets2.settings_menu", "Settings Menu");
