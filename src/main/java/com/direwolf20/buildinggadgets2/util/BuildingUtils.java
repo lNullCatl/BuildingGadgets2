@@ -32,7 +32,7 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.BlockSnapshot;
 import net.neoforged.neoforge.event.EventHooks;
-import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
@@ -496,7 +496,7 @@ public class BuildingUtils {
             BlockPos blockPos = pos.pos;
             if (!level.mayInteract(player, blockPos.offset(lookingAt)))
                 continue; //Chunk Protection like spawn and FTB Utils
-            BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(level, blockPos.offset(lookingAt), level.getBlockState(blockPos.offset(lookingAt)), player);
+            BreakBlockEvent event = new BreakBlockEvent(level, blockPos.offset(lookingAt), level.getBlockState(blockPos.offset(lookingAt)), player);
             if (NeoForge.EVENT_BUS.post(event).isCanceled()) continue;
             if (EventHooks.onBlockPlace(player, BlockSnapshot.create(level.dimension(), level, blockPos.offset(lookingAt).below()), Direction.UP))
                 continue; //FTB Chunk Protection, etc

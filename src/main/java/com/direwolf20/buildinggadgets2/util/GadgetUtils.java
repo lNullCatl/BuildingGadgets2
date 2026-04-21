@@ -24,7 +24,7 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -172,7 +172,7 @@ public class GadgetUtils {
             if (!level.isClientSide()) { //Only check these on server side
                 if (!level.mayInteract(player, blockPos))
                     return; //Chunk Protection like spawn and FTB Utils
-                BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(level, blockPos, level.getBlockState(blockPos), player);
+                BreakBlockEvent event = new BreakBlockEvent(level, blockPos, level.getBlockState(blockPos), player);
                 if (NeoForge.EVENT_BUS.post(event).isCanceled()) return;
             }
             if (blockState.hasBlockEntity() && !GadgetNBT.getSetting(gadget, GadgetNBT.ToggleableSettings.AFFECT_TILES.getName()))
